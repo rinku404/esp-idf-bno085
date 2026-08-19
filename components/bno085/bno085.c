@@ -44,14 +44,7 @@ static void bno085_event_cb(void *cookie, sh2_AsyncEvent_t *pEvent)
 
 static int bno085_hal_open(sh2_Hal_t *self)
 {
-    bno085_hal_t *me = (bno085_hal_t *)self;
-
-    gpio_set_level(me->reset_pin, 0);
-    vTaskDelay(pdMS_TO_TICKS(10));
-    gpio_set_level(me->reset_pin, 1);
-    vTaskDelay(pdMS_TO_TICKS(150));
-
-    ESP_LOGI(TAG, "BNO085 HAL open: reset pulse issued");
+    (void) self;
     return SH2_OK;
 }
 
@@ -146,6 +139,26 @@ esp_err_t bno085_init(i2c_master_dev_handle_t i2c_dev, gpio_num_t int_pin, gpio_
     }
     gpio_set_level(reset_pin, 1);
 
+    ESP_LOGI(TAG, "Asserting NRST (reset pulse)...");
+    gpio_set_level(reset_pin, 0);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    gpio_set_level(reset_pin, 1);
+
+    ESP_LOGI(TAG, "Waiting for H_INTN to assert (device ready)...");
+    int timeout_ms = 500;
+    int elapsed = 0;
+    while (gpio_get_level(int_pin) != 0 && elapsed < timeout_ms) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+        elapsed++;
+    }
+
+    if (gpio_get_level(int_pin) != 0) {
+        ESP_LOGE(TAG, "H_INTN never asserted after reset (timeout %d ms) — check RESET/power wiring", timeout_ms);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "H_INTN asserted after %d ms, device is ready", elapsed);
+
     s_hal.base.open      = bno085_hal_open;
     s_hal.base.close     = bno085_hal_close;
     s_hal.base.read      = bno085_hal_read;
@@ -161,7 +174,7 @@ esp_err_t bno085_init(i2c_master_dev_handle_t i2c_dev, gpio_num_t int_pin, gpio_
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "BNO085 HAL opened (int_pin=%d, reset_pin=%d)", int_pin, reset_pin);
+    ESP_LOGI(TAG, "BNO085 initialized successfully (int_pin=%d, reset_pin=%d)", int_pin, reset_pin);
     return ESP_OK;
 }
 

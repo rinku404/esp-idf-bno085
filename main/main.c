@@ -42,14 +42,6 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle));
     ESP_LOGI(TAG, "BNO085 device added to bus at address 0x%02X", BNO085_I2C_ADDR);
 
-    esp_err_t probe_err = i2c_master_probe(bus_handle, BNO085_I2C_ADDR, 100);
-    if (probe_err != ESP_OK) {
-        ESP_LOGW(TAG, "BNO085 not ACKing at 0x%02X (err=%s) - check SDA/SCL/address wiring",
-                 BNO085_I2C_ADDR, esp_err_to_name(probe_err));
-    } else {
-        ESP_LOGI(TAG, "BNO085 device responded to probe");
-    }
-
     ESP_ERROR_CHECK(bno085_init(dev_handle, BNO085_INT_GPIO, BNO085_RST_GPIO));
     ESP_LOGI(TAG, "BNO085 driver initialized, starting service loop");
 
