@@ -42,6 +42,26 @@
 
 static const char *TAG = "bno085_example";
 
+/* CSV data buffer for accumulating sensor values */
+#ifdef CONFIG_APP_BNO085_OUTPUT_CSV
+typedef struct {
+    uint64_t timestamp_us;
+    bool has_accel;
+    float accel[3];
+    bool has_gyro;
+    float gyro[3];
+    bool has_linear_accel;
+    float linear_accel[3];
+    bool has_mag;
+    float mag[3];
+    bool has_quat;
+    float quat[4];
+} csv_buffer_t;
+
+static csv_buffer_t csv_buffer = {0};
+static bool csv_header_printed = false;
+#endif
+
 /**
  * Callback invoked whenever the BNO085 sends sensor data.
  * Outputs data in either verbose or CSV format based on configuration.
@@ -58,10 +78,10 @@ static void sensor_callback(bno085_handle_t handle,
     }
 
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
-    /* CSV format for Edge Impulse */
-    static bool first_sample = true;
+    /* CSV format for Edge Impulse - buffer values by timestamp */
 
-    if (first_sample && CONFIG_APP_BNO085_CSV_PRINT_HEADER) {
+    /* Print header on first sample */
+    if (!csv_header_printed && CONFIG_APP_BNO085_CSV_PRINT_HEADER) {
         printf("timestamp_ms");
 #ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
         printf(",ax,ay,az");
@@ -79,58 +99,93 @@ static void sensor_callback(bno085_handle_t handle,
         printf(",qx,qy,qz,qw");
 #endif
         printf("\n");
-        first_sample = false;
+        csv_header_printed = true;
     }
 
-    printf("%llu", value->timestamp_us / 1000);
-
+    /* Check if this is a new sample (different timestamp) */
+    if (csv_buffer.timestamp_us != 0 && value->timestamp_us != csv_buffer.timestamp_us) {
+        /* Print the previous sample */
+        printf("%llu", csv_buffer.timestamp_us / 1000);
 #ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
-    if (value->sensor_id == BNO085_SENSOR_ACCELEROMETER) {
-        printf(",%.4f,%.4f,%.4f",
-               value->data.accelerometer.x,
-               value->data.accelerometer.y,
-               value->data.accelerometer.z);
-    }
+        if (csv_buffer.has_accel) {
+            printf(",%.4f,%.4f,%.4f", csv_buffer.accel[0], csv_buffer.accel[1], csv_buffer.accel[2]);
+        }
 #endif
-
 #ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
-    if (value->sensor_id == BNO085_SENSOR_GYROSCOPE_CALIBRATED) {
-        printf(",%.4f,%.4f,%.4f",
-               value->data.gyroscope.x,
-               value->data.gyroscope.y,
-               value->data.gyroscope.z);
-    }
+        if (csv_buffer.has_gyro) {
+            printf(",%.4f,%.4f,%.4f", csv_buffer.gyro[0], csv_buffer.gyro[1], csv_buffer.gyro[2]);
+        }
 #endif
-
 #ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
-    if (value->sensor_id == BNO085_SENSOR_LINEAR_ACCELERATION) {
-        printf(",%.4f,%.4f,%.4f",
-               value->data.linear_acceleration.x,
-               value->data.linear_acceleration.y,
-               value->data.linear_acceleration.z);
-    }
+        if (csv_buffer.has_linear_accel) {
+            printf(",%.4f,%.4f,%.4f", csv_buffer.linear_accel[0], csv_buffer.linear_accel[1], csv_buffer.linear_accel[2]);
+        }
 #endif
-
 #ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
-    if (value->sensor_id == BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED) {
-        printf(",%.4f,%.4f,%.4f",
-               value->data.magnetic_field.x,
-               value->data.magnetic_field.y,
-               value->data.magnetic_field.z);
-    }
+        if (csv_buffer.has_mag) {
+            printf(",%.4f,%.4f,%.4f", csv_buffer.mag[0], csv_buffer.mag[1], csv_buffer.mag[2]);
+        }
 #endif
-
 #ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
-    if (value->sensor_id == BNO085_SENSOR_ROTATION_VECTOR) {
-        printf(",%.4f,%.4f,%.4f,%.4f",
-               value->data.rotation_vector.i,
-               value->data.rotation_vector.j,
-               value->data.rotation_vector.k,
-               value->data.rotation_vector.real);
-    }
+        if (csv_buffer.has_quat) {
+            printf(",%.4f,%.4f,%.4f,%.4f", csv_buffer.quat[0], csv_buffer.quat[1], csv_buffer.quat[2], csv_buffer.quat[3]);
+        }
 #endif
+        printf("\n");
+        fflush(stdout);
 
-    printf("\n");
+        /* Reset buffer for new sample */
+        memset(&csv_buffer, 0, sizeof(csv_buffer));
+    }
+
+    /* Update buffer with current sensor value */
+    csv_buffer.timestamp_us = value->timestamp_us;
+
+    switch (value->sensor_id) {
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+        case BNO085_SENSOR_ACCELEROMETER:
+            csv_buffer.has_accel = true;
+            csv_buffer.accel[0] = value->data.accelerometer.x;
+            csv_buffer.accel[1] = value->data.accelerometer.y;
+            csv_buffer.accel[2] = value->data.accelerometer.z;
+            break;
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
+        case BNO085_SENSOR_GYROSCOPE_CALIBRATED:
+            csv_buffer.has_gyro = true;
+            csv_buffer.gyro[0] = value->data.gyroscope.x;
+            csv_buffer.gyro[1] = value->data.gyroscope.y;
+            csv_buffer.gyro[2] = value->data.gyroscope.z;
+            break;
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
+        case BNO085_SENSOR_LINEAR_ACCELERATION:
+            csv_buffer.has_linear_accel = true;
+            csv_buffer.linear_accel[0] = value->data.linear_acceleration.x;
+            csv_buffer.linear_accel[1] = value->data.linear_acceleration.y;
+            csv_buffer.linear_accel[2] = value->data.linear_acceleration.z;
+            break;
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
+        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED:
+            csv_buffer.has_mag = true;
+            csv_buffer.mag[0] = value->data.magnetic_field.x;
+            csv_buffer.mag[1] = value->data.magnetic_field.y;
+            csv_buffer.mag[2] = value->data.magnetic_field.z;
+            break;
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
+        case BNO085_SENSOR_ROTATION_VECTOR:
+            csv_buffer.has_quat = true;
+            csv_buffer.quat[0] = value->data.rotation_vector.i;
+            csv_buffer.quat[1] = value->data.rotation_vector.j;
+            csv_buffer.quat[2] = value->data.rotation_vector.k;
+            csv_buffer.quat[3] = value->data.rotation_vector.real;
+            break;
+#endif
+        default:
+            break;
+    }
 
 #else
     /* Verbose format (human-readable) */
