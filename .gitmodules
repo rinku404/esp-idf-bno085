@@ -1,3 +1,3 @@
-[submodule "components/sh2"]
-	path = components/sh2
+[submodule "components/bno085/sh2"]
+	path = components/bno085/sh2
 	url = https://github.com/ceva-dsp/sh2.git

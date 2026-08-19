@@ -18,66 +18,54 @@
 
 static const char *TAG = "app_main";
 
-// Example sensor callback to print rotation vector data
-static void sensor_callback(sh2_SensorEvent_t *event)
+static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t *value, void *user_context)
 {
-    if (!event) return;
+    (void) handle;
+    (void) user_context;
 
-    // Decode the sensor event into human-readable format
-    sh2_SensorValue_t sensorValue;
-    memset(&sensorValue, 0, sizeof(sensorValue));
+    if (!value) return;
 
-    int rc = sh2_decodeSensorEvent(&sensorValue, event);
-    if (rc != SH2_OK) {
-        return;
-    }
-
-    // Print data based on sensor type
-    switch (sensorValue.sensorId) {
-        case SH2_ROTATION_VECTOR: {
-            // Rotation Vector: quaternion (most accurate orientation)
+    switch (value->sensor_id) {
+        case BNO085_SENSOR_ROTATION_VECTOR: {
             ESP_LOGI(TAG, "Rotation Vector: i=%.4f, j=%.4f, k=%.4f, real=%.4f, accuracy=%.1f°",
-                     sensorValue.un.rotationVector.i,
-                     sensorValue.un.rotationVector.j,
-                     sensorValue.un.rotationVector.k,
-                     sensorValue.un.rotationVector.real,
-                     sensorValue.un.rotationVector.accuracy * 57.2958f);  // rad to degrees
+                     value->data.rotation_vector.i,
+                     value->data.rotation_vector.j,
+                     value->data.rotation_vector.k,
+                     value->data.rotation_vector.real,
+                     value->data.rotation_vector.accuracy_rad * 57.2958f);
             break;
         }
-        case SH2_LINEAR_ACCELERATION: {
-            // Linear acceleration (gravity removed)
+        case BNO085_SENSOR_LINEAR_ACCELERATION: {
             ESP_LOGI(TAG, "Linear Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
-                     sensorValue.un.linearAcceleration.x,
-                     sensorValue.un.linearAcceleration.y,
-                     sensorValue.un.linearAcceleration.z);
+                     value->data.linear_acceleration.x,
+                     value->data.linear_acceleration.y,
+                     value->data.linear_acceleration.z);
             break;
         }
-        case SH2_GYROSCOPE_CALIBRATED: {
-            // Calibrated gyroscope in rad/s
+        case BNO085_SENSOR_GYROSCOPE_CALIBRATED: {
             ESP_LOGI(TAG, "Gyro: x=%.4f, y=%.4f, z=%.4f rad/s",
-                     sensorValue.un.gyroscope.x,
-                     sensorValue.un.gyroscope.y,
-                     sensorValue.un.gyroscope.z);
+                     value->data.gyroscope.x,
+                     value->data.gyroscope.y,
+                     value->data.gyroscope.z);
             break;
         }
-        case SH2_ACCELEROMETER: {
-            // Accelerometer with gravity
+        case BNO085_SENSOR_ACCELEROMETER: {
             ESP_LOGI(TAG, "Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
-                     sensorValue.un.accelerometer.x,
-                     sensorValue.un.accelerometer.y,
-                     sensorValue.un.accelerometer.z);
+                     value->data.accelerometer.x,
+                     value->data.accelerometer.y,
+                     value->data.accelerometer.z);
             break;
         }
-        case SH2_MAGNETIC_FIELD_CALIBRATED: {
-            // Magnetometer
+        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED: {
             ESP_LOGI(TAG, "Mag: x=%.1f, y=%.1f, z=%.1f µT",
-                     sensorValue.un.magneticField.x,
-                     sensorValue.un.magneticField.y,
-                     sensorValue.un.magneticField.z);
+                     value->data.magnetic_field.x,
+                     value->data.magnetic_field.y,
+                     value->data.magnetic_field.z);
             break;
         }
         default:
-            ESP_LOGD(TAG, "Sensor 0x%02x: timestamp=%lld µs", sensorValue.sensorId, event->timestamp_uS);
+            ESP_LOGD(TAG, "Sensor 0x%02x: status=%u, timestamp=%llu µs",
+                     value->sensor_id, value->status, value->timestamp_us);
             break;
     }
 }
@@ -107,33 +95,38 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle));
     ESP_LOGI(TAG, "BNO085 device added to bus at address 0x%02X", BNO085_I2C_ADDR);
 
-    ESP_ERROR_CHECK(bno085_init(dev_handle, BNO085_INT_GPIO, BNO085_RST_GPIO));
+    /* Initialize BNO085 with default configuration */
+    bno085_config_t config;
+    bno085_config_default(&config);
+
+    bno085_handle_t bno085_handle;
+    ESP_ERROR_CHECK(bno085_init(&config, dev_handle, BNO085_INT_GPIO, BNO085_RST_GPIO, &bno085_handle));
     ESP_LOGI(TAG, "BNO085 driver initialized");
 
-    // Register sensor callback to receive data
-    ESP_ERROR_CHECK(bno085_register_sensor_callback(sensor_callback, NULL));
+    /* Register sensor callback to receive data */
+    ESP_ERROR_CHECK(bno085_register_sensor_callback(bno085_handle, sensor_callback, NULL));
 
-    // Enable sensors with reporting intervals
+    /* Enable sensors with reporting intervals */
     // Rotation Vector: 100ms interval (10 Hz)
-    ESP_ERROR_CHECK(bno085_enable_sensor(SH2_ROTATION_VECTOR, 100000));
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ROTATION_VECTOR, 100000));
 
-    // Optional: enable other sensors
+    /* Optional: enable other sensors */
     // Linear Acceleration: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(SH2_LINEAR_ACCELERATION, 100000));
+    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_LINEAR_ACCELERATION, 100000));
 
     // Calibrated Gyroscope: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(SH2_GYROSCOPE_CALIBRATED, 100000));
+    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_GYROSCOPE_CALIBRATED, 100000));
 
     // Accelerometer: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(SH2_ACCELEROMETER, 100000));
+    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ACCELEROMETER, 100000));
 
     // Magnetometer: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(SH2_MAGNETIC_FIELD_CALIBRATED, 100000));
+    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED, 100000));
 
     ESP_LOGI(TAG, "Sensors enabled, starting service loop...");
 
     while (1) {
-        bno085_service();
+        bno085_service(bno085_handle);
         vTaskDelay(pdMS_TO_TICKS(10));  // Service at 100Hz
     }
 }
