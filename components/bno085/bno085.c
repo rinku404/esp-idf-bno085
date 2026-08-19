@@ -44,7 +44,27 @@ static void bno085_event_cb(void *cookie, sh2_AsyncEvent_t *pEvent)
 
 static int bno085_hal_open(sh2_Hal_t *self)
 {
-    (void) self;
+    bno085_hal_t *me = (bno085_hal_t *)self;
+
+    uint8_t softreset_pkt[] = {5, 0, 1, 0, 1};
+    bool success = false;
+
+    for (uint8_t attempts = 0; attempts < 5; attempts++) {
+        esp_err_t err = i2c_master_transmit(me->i2c_dev, softreset_pkt, sizeof(softreset_pkt), 100);
+        if (err == ESP_OK) {
+            success = true;
+            ESP_LOGI(TAG, "Soft-reset I2C packet sent successfully");
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(30));
+    }
+
+    if (!success) {
+        ESP_LOGE(TAG, "Failed to send soft-reset I2C packet after 5 attempts");
+        return SH2_ERR_IO;
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(300));
     return SH2_OK;
 }
 
@@ -143,21 +163,7 @@ esp_err_t bno085_init(i2c_master_dev_handle_t i2c_dev, gpio_num_t int_pin, gpio_
     gpio_set_level(reset_pin, 0);
     vTaskDelay(pdMS_TO_TICKS(10));
     gpio_set_level(reset_pin, 1);
-
-    ESP_LOGI(TAG, "Waiting for H_INTN to assert (device ready)...");
-    int timeout_ms = 2000;
-    int elapsed = 0;
-    while (gpio_get_level(int_pin) != 0 && elapsed < timeout_ms) {
-        vTaskDelay(pdMS_TO_TICKS(1));
-        elapsed++;
-    }
-
-    if (gpio_get_level(int_pin) != 0) {
-        ESP_LOGE(TAG, "H_INTN never asserted after reset (timeout %d ms) — check RESET/power wiring", timeout_ms);
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "H_INTN asserted after %d ms, device is ready", elapsed);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     s_hal.base.open      = bno085_hal_open;
     s_hal.base.close     = bno085_hal_close;
