@@ -34,4 +34,38 @@ void bno085_service(void);
  */
 void bno085_deinit(void);
 
+/**
+ * @brief Register a callback to receive sensor data.
+ *
+ * The callback will be invoked whenever sensor data is available from the device.
+ * Must be called after bno085_init().
+ *
+ * @param callback Function pointer to receive sensor events
+ * @param cookie User context passed to callback (typically NULL)
+ * @return ESP_OK on success, ESP_FAIL on error
+ */
+esp_err_t bno085_register_sensor_callback(void (*callback)(sh2_SensorEvent_t *event), void *cookie);
+
+/**
+ * @brief Enable a sensor with specified reporting rate.
+ *
+ * Configures the sensor to stream data at the specified interval.
+ * Must be called after bno085_init() and after registering a callback.
+ *
+ * @param sensor_id Sensor ID (e.g., SH2_ROTATION_VECTOR)
+ * @param report_interval_us Reporting interval in microseconds (e.g., 100000 for 10Hz)
+ * @return ESP_OK on success, ESP_FAIL on error
+ */
+esp_err_t bno085_enable_sensor(uint8_t sensor_id, uint32_t report_interval_us);
+
+/**
+ * @brief Disable a sensor.
+ *
+ * Stops receiving data from the specified sensor.
+ *
+ * @param sensor_id Sensor ID to disable
+ * @return ESP_OK on success, ESP_FAIL on error
+ */
+esp_err_t bno085_disable_sensor(uint8_t sensor_id);
+
 #endif

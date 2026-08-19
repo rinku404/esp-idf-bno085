@@ -23,6 +23,18 @@ typedef struct {
 
 static bno085_hal_t s_hal;
 
+// User-provided sensor callback
+static void (*s_user_sensor_callback)(sh2_SensorEvent_t *event) = NULL;
+static void *s_user_sensor_cookie = NULL;
+
+static void bno085_sensor_cb(void *cookie, sh2_SensorEvent_t *pEvent)
+{
+    (void) cookie;
+    if (s_user_sensor_callback) {
+        s_user_sensor_callback(pEvent);
+    }
+}
+
 static void bno085_event_cb(void *cookie, sh2_AsyncEvent_t *pEvent)
 {
     (void) cookie;
@@ -193,4 +205,60 @@ void bno085_service(void)
 void bno085_deinit(void)
 {
     sh2_close();
+}
+
+esp_err_t bno085_register_sensor_callback(void (*callback)(sh2_SensorEvent_t *event), void *cookie)
+{
+    if (!callback) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    s_user_sensor_callback = callback;
+    s_user_sensor_cookie = cookie;
+
+    int rc = sh2_setSensorCallback(bno085_sensor_cb, cookie);
+    if (rc != SH2_OK) {
+        ESP_LOGE(TAG, "sh2_setSensorCallback() failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Sensor callback registered");
+    return ESP_OK;
+}
+
+esp_err_t bno085_enable_sensor(uint8_t sensor_id, uint32_t report_interval_us)
+{
+    sh2_SensorConfig_t config;
+    memset(&config, 0, sizeof(config));
+
+    config.changeSensitivityEnabled = false;
+    config.wakeupEnabled = false;
+    config.alwaysOnEnabled = false;
+    config.sniffEnabled = false;
+    config.reportInterval_us = report_interval_us;
+
+    int rc = sh2_setSensorConfig(sensor_id, &config);
+    if (rc != SH2_OK) {
+        ESP_LOGE(TAG, "Failed to enable sensor 0x%02x, rc=%d", sensor_id, rc);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Sensor 0x%02x enabled with interval %u us", sensor_id, report_interval_us);
+    return ESP_OK;
+}
+
+esp_err_t bno085_disable_sensor(uint8_t sensor_id)
+{
+    sh2_SensorConfig_t config;
+    memset(&config, 0, sizeof(config));
+    config.reportInterval_us = 0;  // 0 = disable
+
+    int rc = sh2_setSensorConfig(sensor_id, &config);
+    if (rc != SH2_OK) {
+        ESP_LOGE(TAG, "Failed to disable sensor 0x%02x, rc=%d", sensor_id, rc);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Sensor 0x%02x disabled", sensor_id);
+    return ESP_OK;
 }
