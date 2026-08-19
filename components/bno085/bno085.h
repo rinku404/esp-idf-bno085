@@ -5,6 +5,7 @@
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "sh2.h"
+#include "sh2_err.h"
 #include "sh2_SensorValue.h"
 
 /**

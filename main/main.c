@@ -63,9 +63,9 @@ static void sensor_callback(sh2_SensorEvent_t *event)
         case SH2_ACCELEROMETER: {
             // Accelerometer with gravity
             ESP_LOGI(TAG, "Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
-                     sensorValue.un.acceleration.x,
-                     sensorValue.un.acceleration.y,
-                     sensorValue.un.acceleration.z);
+                     sensorValue.un.accelerometer.x,
+                     sensorValue.un.accelerometer.y,
+                     sensorValue.un.accelerometer.z);
             break;
         }
         case SH2_MAGNETIC_FIELD_CALIBRATED: {
