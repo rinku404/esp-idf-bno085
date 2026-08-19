@@ -1,5 +1,5 @@
-version: "1.0.1"
+version: "1.0.0"
 description: "Basic example demonstrating BNO085 sensor data acquisition"
 dependencies:
   bno085:
-    version: "1.0.1"
+    version: "1.0.0"
