@@ -334,7 +334,9 @@ esp_err_t bno085_init(const bno085_config_t *config,
     s_active_instance = (bno085_handle_t)dev;
     *out_handle = (bno085_handle_t)dev;
 
+    /* Debug: Check GPIO states after init */
     ESP_LOGI(TAG, "BNO085 initialized successfully (int_pin=%d, reset_pin=%d)", int_pin, reset_pin);
+    ESP_LOGI(TAG, "GPIO states: INT=%d, RST=%d", gpio_get_level(int_pin), gpio_get_level(reset_pin));
     return ESP_OK;
 }
 
