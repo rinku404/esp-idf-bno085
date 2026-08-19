@@ -145,7 +145,7 @@ esp_err_t bno085_init(i2c_master_dev_handle_t i2c_dev, gpio_num_t int_pin, gpio_
     gpio_set_level(reset_pin, 1);
 
     ESP_LOGI(TAG, "Waiting for H_INTN to assert (device ready)...");
-    int timeout_ms = 500;
+    int timeout_ms = 2000;
     int elapsed = 0;
     while (gpio_get_level(int_pin) != 0 && elapsed < timeout_ms) {
         vTaskDelay(pdMS_TO_TICKS(1));
