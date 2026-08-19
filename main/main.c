@@ -7,10 +7,10 @@
 #include "bno085.h"
 
 #define BNO085_I2C_PORT     I2C_NUM_0
-#define BNO085_SDA_GPIO     GPIO_NUM_8     // PLACEHOLDER — adjust for your board
-#define BNO085_SCL_GPIO     GPIO_NUM_9     // PLACEHOLDER — adjust for your board
-#define BNO085_INT_GPIO     GPIO_NUM_4     // PLACEHOLDER — H_INTN pin
-#define BNO085_RST_GPIO     GPIO_NUM_5     // PLACEHOLDER — RSTN pin
+#define BNO085_SDA_GPIO     GPIO_NUM_6     // Heltec Lora V3 SDA
+#define BNO085_SCL_GPIO     GPIO_NUM_7     // Heltec Lora V3 SCL
+#define BNO085_INT_GPIO     GPIO_NUM_5     // H_INTN pin
+#define BNO085_RST_GPIO     GPIO_NUM_4     // RSTN pin
 
 #define BNO085_I2C_ADDR     0x4A
 #define BNO085_I2C_FREQ_HZ  400000
