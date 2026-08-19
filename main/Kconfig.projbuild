@@ -1,0 +1,61 @@
+menu "BNO085 Application Configuration"
+
+    config APP_BNO085_ENABLE_ROTATION_VECTOR
+        bool "Enable Rotation Vector (Quaternion)"
+        default y
+        help
+            Enable rotation vector sensor for orientation data.
+
+    config APP_BNO085_ENABLE_ACCELEROMETER
+        bool "Enable Accelerometer"
+        default y
+        help
+            Enable accelerometer sensor (includes gravity).
+
+    config APP_BNO085_ENABLE_GYROSCOPE
+        bool "Enable Calibrated Gyroscope"
+        default y
+        help
+            Enable calibrated gyroscope sensor.
+
+    config APP_BNO085_ENABLE_LINEAR_ACCELERATION
+        bool "Enable Linear Acceleration"
+        default y
+        help
+            Enable linear acceleration sensor (gravity removed).
+
+    config APP_BNO085_ENABLE_MAGNETIC_FIELD
+        bool "Enable Magnetic Field (Magnetometer)"
+        default n
+        help
+            Enable calibrated magnetometer sensor.
+
+    choice APP_BNO085_OUTPUT_FORMAT
+        prompt "Output Format"
+        default APP_BNO085_OUTPUT_VERBOSE
+        help
+            Select output format for sensor data.
+
+        config APP_BNO085_OUTPUT_VERBOSE
+            bool "Verbose (human-readable)"
+
+        config APP_BNO085_OUTPUT_CSV
+            bool "CSV (Edge Impulse CLI)"
+
+    endchoice
+
+    config APP_BNO085_SAMPLING_RATE_HZ
+        int "Sampling Rate (Hz)"
+        default 100
+        range 1 1000
+        help
+            Sensor sampling rate in Hz.
+
+    config APP_BNO085_CSV_PRINT_HEADER
+        bool "Print CSV Header on Startup"
+        depends on APP_BNO085_OUTPUT_CSV
+        default y
+        help
+            Print column names as first line when using CSV format.
+
+endmenu

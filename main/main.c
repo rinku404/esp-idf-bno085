@@ -7,6 +7,9 @@
 #include "esp_log.h"
 #include "bno085.h"
 
+/* Application configuration from menuconfig */
+#include "sdkconfig.h"
+
 #define BNO085_I2C_PORT     I2C_NUM_0
 #define BNO085_SDA_GPIO     GPIO_NUM_6     // Heltec Lora V3 SDA
 #define BNO085_SCL_GPIO     GPIO_NUM_7     // Heltec Lora V3 SCL
@@ -18,6 +21,9 @@
 
 static const char *TAG = "app_main";
 
+/* Track CSV header printing */
+static bool csv_header_printed = false;
+
 static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t *value, void *user_context)
 {
     (void) handle;
@@ -25,49 +31,137 @@ static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t 
 
     if (!value) return;
 
+#ifdef CONFIG_APP_BNO085_OUTPUT_CSV
+    /* CSV format for Edge Impulse */
+    static bool first_sample = true;
+
+    if (first_sample && CONFIG_APP_BNO085_CSV_PRINT_HEADER) {
+        /* Print header */
+        printf("timestamp_ms");
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+        printf(",ax,ay,az");
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
+        printf(",gx,gy,gz");
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
+        printf(",lax,lay,laz");
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
+        printf(",mx,my,mz");
+#endif
+#ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
+        printf(",qx,qy,qz,qw");
+#endif
+        printf("\n");
+        first_sample = false;
+    }
+
+    /* Print timestamp and sensor values */
+    printf("%llu", value->timestamp_us / 1000);  /* Convert to milliseconds */
+
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+    if (value->sensor_id == BNO085_SENSOR_ACCELEROMETER) {
+        printf(",%.4f,%.4f,%.4f",
+               value->data.accelerometer.x,
+               value->data.accelerometer.y,
+               value->data.accelerometer.z);
+    }
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
+    if (value->sensor_id == BNO085_SENSOR_GYROSCOPE_CALIBRATED) {
+        printf(",%.4f,%.4f,%.4f",
+               value->data.gyroscope.x,
+               value->data.gyroscope.y,
+               value->data.gyroscope.z);
+    }
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
+    if (value->sensor_id == BNO085_SENSOR_LINEAR_ACCELERATION) {
+        printf(",%.4f,%.4f,%.4f",
+               value->data.linear_acceleration.x,
+               value->data.linear_acceleration.y,
+               value->data.linear_acceleration.z);
+    }
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
+    if (value->sensor_id == BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED) {
+        printf(",%.4f,%.4f,%.4f",
+               value->data.magnetic_field.x,
+               value->data.magnetic_field.y,
+               value->data.magnetic_field.z);
+    }
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
+    if (value->sensor_id == BNO085_SENSOR_ROTATION_VECTOR) {
+        printf(",%.4f,%.4f,%.4f,%.4f",
+               value->data.rotation_vector.i,
+               value->data.rotation_vector.j,
+               value->data.rotation_vector.k,
+               value->data.rotation_vector.real);
+    }
+#endif
+
+    printf("\n");
+
+#else
+    /* Verbose format (human-readable) */
     switch (value->sensor_id) {
-        case BNO085_SENSOR_ROTATION_VECTOR: {
+        case BNO085_SENSOR_ROTATION_VECTOR:
+#ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
             ESP_LOGI(TAG, "Rotation Vector: i=%.4f, j=%.4f, k=%.4f, real=%.4f, accuracy=%.1f°",
                      value->data.rotation_vector.i,
                      value->data.rotation_vector.j,
                      value->data.rotation_vector.k,
                      value->data.rotation_vector.real,
                      value->data.rotation_vector.accuracy_rad * 57.2958f);
+#endif
             break;
-        }
-        case BNO085_SENSOR_LINEAR_ACCELERATION: {
+
+        case BNO085_SENSOR_LINEAR_ACCELERATION:
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
             ESP_LOGI(TAG, "Linear Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
                      value->data.linear_acceleration.x,
                      value->data.linear_acceleration.y,
                      value->data.linear_acceleration.z);
+#endif
             break;
-        }
-        case BNO085_SENSOR_GYROSCOPE_CALIBRATED: {
+
+        case BNO085_SENSOR_GYROSCOPE_CALIBRATED:
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
             ESP_LOGI(TAG, "Gyro: x=%.4f, y=%.4f, z=%.4f rad/s",
                      value->data.gyroscope.x,
                      value->data.gyroscope.y,
                      value->data.gyroscope.z);
+#endif
             break;
-        }
-        case BNO085_SENSOR_ACCELEROMETER: {
+
+        case BNO085_SENSOR_ACCELEROMETER:
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
             ESP_LOGI(TAG, "Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
                      value->data.accelerometer.x,
                      value->data.accelerometer.y,
                      value->data.accelerometer.z);
+#endif
             break;
-        }
-        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED: {
+
+        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED:
+#ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
             ESP_LOGI(TAG, "Mag: x=%.1f, y=%.1f, z=%.1f µT",
                      value->data.magnetic_field.x,
                      value->data.magnetic_field.y,
                      value->data.magnetic_field.z);
+#endif
             break;
-        }
+
         default:
-            ESP_LOGD(TAG, "Sensor 0x%02x: status=%u, timestamp=%llu µs",
-                     value->sensor_id, value->status, value->timestamp_us);
             break;
     }
+#endif
 }
 
 void app_main(void)
@@ -95,7 +189,7 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle));
     ESP_LOGI(TAG, "BNO085 device added to bus at address 0x%02X", BNO085_I2C_ADDR);
 
-    /* Initialize BNO085 with default configuration */
+    /* Initialize BNO085 with config from menuconfig */
     bno085_config_t config;
     bno085_config_default(&config);
 
@@ -106,22 +200,34 @@ void app_main(void)
     /* Register sensor callback to receive data */
     ESP_ERROR_CHECK(bno085_register_sensor_callback(bno085_handle, sensor_callback, NULL));
 
-    /* Enable sensors with reporting intervals */
-    // Rotation Vector: 100ms interval (10 Hz)
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ROTATION_VECTOR, 100000));
+    /* Enable sensors based on Kconfig settings */
+    uint32_t report_interval_us = (1000000 / CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 
-    /* Optional: enable other sensors */
-    // Linear Acceleration: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_LINEAR_ACCELERATION, 100000));
+#ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ROTATION_VECTOR, report_interval_us));
+#endif
 
-    // Calibrated Gyroscope: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_GYROSCOPE_CALIBRATED, 100000));
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_LINEAR_ACCELERATION, report_interval_us));
+#endif
 
-    // Accelerometer: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ACCELEROMETER, 100000));
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_GYROSCOPE_CALIBRATED, report_interval_us));
+#endif
 
-    // Magnetometer: 100ms interval
-    // ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED, 100000));
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ACCELEROMETER, report_interval_us));
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED, report_interval_us));
+#endif
+
+#ifdef CONFIG_APP_BNO085_OUTPUT_CSV
+    ESP_LOGI(TAG, "Output format: CSV (Edge Impulse), sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
+#else
+    ESP_LOGI(TAG, "Output format: Verbose, sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
+#endif
 
     ESP_LOGI(TAG, "Sensors enabled, starting service loop...");
 

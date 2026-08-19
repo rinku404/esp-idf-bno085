@@ -1,0 +1,78 @@
+menu "BNO085 Configuration"
+
+    config BNO085_ENABLE_ROTATION_VECTOR
+        bool "Enable Rotation Vector (Quaternion)"
+        default y
+        help
+            Enable rotation vector sensor for orientation data.
+            Outputs quaternion (i, j, k, real) components.
+
+    config BNO085_ENABLE_ACCELEROMETER
+        bool "Enable Accelerometer"
+        default y
+        help
+            Enable accelerometer sensor (includes gravity).
+            Outputs x, y, z in m/s².
+
+    config BNO085_ENABLE_GYROSCOPE
+        bool "Enable Calibrated Gyroscope"
+        default y
+        help
+            Enable calibrated gyroscope sensor.
+            Outputs x, y, z in rad/s.
+
+    config BNO085_ENABLE_LINEAR_ACCELERATION
+        bool "Enable Linear Acceleration"
+        default y
+        help
+            Enable linear acceleration sensor (gravity removed).
+            Outputs x, y, z in m/s².
+
+    config BNO085_ENABLE_MAGNETIC_FIELD
+        bool "Enable Magnetic Field (Magnetometer)"
+        default n
+        help
+            Enable calibrated magnetometer sensor.
+            Outputs x, y, z in µTesla.
+
+    choice BNO085_OUTPUT_FORMAT
+        prompt "Output Format"
+        default BNO085_OUTPUT_VERBOSE
+        help
+            Select output format for sensor data.
+            - Verbose: Human-readable format with labels
+            - CSV (Edge Impulse): CSV format compatible with Edge Impulse CLI
+
+        config BNO085_OUTPUT_VERBOSE
+            bool "Verbose (human-readable)"
+            help
+                Print sensor data in human-readable format with labels.
+                Example: "Accel: x=9.81, y=0.00, z=0.00 m/s²"
+
+        config BNO085_OUTPUT_CSV
+            bool "CSV (Edge Impulse CLI)"
+            help
+                Print sensor data in CSV format for Edge Impulse data upload.
+                One line per sample with comma-separated values.
+                Includes header row with column names.
+
+    endchoice
+
+    config BNO085_SAMPLING_RATE_HZ
+        int "Sampling Rate (Hz)"
+        default 100
+        range 1 1000
+        help
+            Sensor sampling rate in Hz.
+            Higher rates consume more power but give better temporal resolution.
+            Typical values: 10 (low power), 50 (standard), 100 (high precision), 1000 (real-time).
+
+    config BNO085_CSV_PRINT_HEADER
+        bool "Print CSV Header on Startup"
+        depends on BNO085_OUTPUT_CSV
+        default y
+        help
+            Print column names as first line when using CSV format.
+            Useful for data logging but can be disabled for continuous streaming.
+
+endmenu
