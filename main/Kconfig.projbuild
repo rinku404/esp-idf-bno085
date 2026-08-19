@@ -1,61 +1,102 @@
 menu "BNO085 Application Configuration"
 
-    config APP_BNO085_ENABLE_ROTATION_VECTOR
-        bool "Enable Rotation Vector (Quaternion)"
-        default y
-        help
-            Enable rotation vector sensor for orientation data.
+    menu "I2C & GPIO"
+        config APP_BNO085_I2C_SDA_GPIO
+            int "I2C SDA GPIO"
+            default 6
+            help
+                GPIO pin for I2C SDA (data line).
 
-    config APP_BNO085_ENABLE_ACCELEROMETER
-        bool "Enable Accelerometer"
-        default y
-        help
-            Enable accelerometer sensor (includes gravity).
+        config APP_BNO085_I2C_SCL_GPIO
+            int "I2C SCL GPIO"
+            default 7
+            help
+                GPIO pin for I2C SCL (clock line).
 
-    config APP_BNO085_ENABLE_GYROSCOPE
-        bool "Enable Calibrated Gyroscope"
-        default y
-        help
-            Enable calibrated gyroscope sensor.
+        config APP_BNO085_I2C_ADDR
+            hex "BNO085 I2C Address"
+            default 0x4A
+            range 0x00 0x7F
+            help
+                I2C slave address (0x4A when AD0=GND, 0x4B when AD0=VCC).
 
-    config APP_BNO085_ENABLE_LINEAR_ACCELERATION
-        bool "Enable Linear Acceleration"
-        default y
-        help
-            Enable linear acceleration sensor (gravity removed).
+        config APP_BNO085_I2C_FREQ_HZ
+            int "I2C Clock Frequency (Hz)"
+            default 400000
+            range 100000 1000000
+            help
+                I2C bus frequency. Standard: 400kHz, Fast: 1MHz.
 
-    config APP_BNO085_ENABLE_MAGNETIC_FIELD
-        bool "Enable Magnetic Field (Magnetometer)"
-        default n
-        help
-            Enable calibrated magnetometer sensor.
+        config APP_BNO085_INT_GPIO
+            int "BNO085 INT (data-ready) GPIO"
+            default 5
+            help
+                GPIO pin for BNO085 H_INTN interrupt.
 
-    choice APP_BNO085_OUTPUT_FORMAT
-        prompt "Output Format"
-        default APP_BNO085_OUTPUT_VERBOSE
-        help
-            Select output format for sensor data.
+        config APP_BNO085_RST_GPIO
+            int "BNO085 RST (reset) GPIO"
+            default 4
+            help
+                GPIO pin for BNO085 NRST reset.
+    endmenu
 
-        config APP_BNO085_OUTPUT_VERBOSE
-            bool "Verbose (human-readable)"
+    menu "Sensors"
+        config APP_BNO085_ENABLE_ROTATION_VECTOR
+            bool "Rotation Vector (Quaternion)"
+            default y
 
-        config APP_BNO085_OUTPUT_CSV
-            bool "CSV (Edge Impulse CLI)"
+        config APP_BNO085_ENABLE_ACCELEROMETER
+            bool "Accelerometer"
+            default y
 
-    endchoice
+        config APP_BNO085_ENABLE_GYROSCOPE
+            bool "Calibrated Gyroscope"
+            default y
 
-    config APP_BNO085_SAMPLING_RATE_HZ
-        int "Sampling Rate (Hz)"
-        default 100
-        range 1 1000
-        help
-            Sensor sampling rate in Hz.
+        config APP_BNO085_ENABLE_LINEAR_ACCELERATION
+            bool "Linear Acceleration"
+            default y
 
-    config APP_BNO085_CSV_PRINT_HEADER
-        bool "Print CSV Header on Startup"
-        depends on APP_BNO085_OUTPUT_CSV
-        default y
-        help
-            Print column names as first line when using CSV format.
+        config APP_BNO085_ENABLE_MAGNETIC_FIELD
+            bool "Magnetic Field (Magnetometer)"
+            default n
+
+        config APP_BNO085_SAMPLING_RATE_HZ
+            int "Sampling Rate (Hz)"
+            default 100
+            range 1 1000
+            help
+                Sensor sampling rate in Hz.
+    endmenu
+
+    menu "Output Format"
+        choice APP_BNO085_OUTPUT_FORMAT
+            prompt "Format"
+            default APP_BNO085_OUTPUT_VERBOSE
+            help
+                Select output format for sensor data.
+
+            config APP_BNO085_OUTPUT_VERBOSE
+                bool "Verbose (human-readable)"
+
+            config APP_BNO085_OUTPUT_CSV
+                bool "CSV (comma-separated values)"
+        endchoice
+
+        config APP_BNO085_CSV_TIMESTAMP_TOLERANCE_MS
+            int "CSV Timestamp Tolerance (ms)"
+            depends on APP_BNO085_OUTPUT_CSV
+            default 5
+            range 1 100
+            help
+                Sensor readings within this tolerance grouped into one line.
+
+        config APP_BNO085_CSV_PRINT_HEADER
+            bool "Print CSV Header"
+            depends on APP_BNO085_OUTPUT_CSV
+            default y
+            help
+                Print column names as first line.
+    endmenu
 
 endmenu

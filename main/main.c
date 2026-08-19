@@ -11,13 +11,13 @@
 #include "sdkconfig.h"
 
 #define BNO085_I2C_PORT     I2C_NUM_0
-#define BNO085_SDA_GPIO     GPIO_NUM_6     // Heltec Lora V3 SDA
-#define BNO085_SCL_GPIO     GPIO_NUM_7     // Heltec Lora V3 SCL
-#define BNO085_INT_GPIO     GPIO_NUM_5     // H_INTN pin
-#define BNO085_RST_GPIO     GPIO_NUM_4     // RSTN pin
+#define BNO085_SDA_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_I2C_SDA_GPIO)
+#define BNO085_SCL_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_I2C_SCL_GPIO)
+#define BNO085_INT_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_INT_GPIO)
+#define BNO085_RST_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_RST_GPIO)
 
-#define BNO085_I2C_ADDR     0x4A
-#define BNO085_I2C_FREQ_HZ  400000
+#define BNO085_I2C_ADDR     CONFIG_APP_BNO085_I2C_ADDR
+#define BNO085_I2C_FREQ_HZ  CONFIG_APP_BNO085_I2C_FREQ_HZ
 
 static const char *TAG = "app_main";
 
@@ -38,6 +38,7 @@ typedef struct {
 } csv_buffer_t;
 
 static csv_buffer_t csv_buffer = {0};
+static csv_buffer_t csv_last_values = {0};
 static bool csv_header_printed = false;
 #endif
 
@@ -49,7 +50,7 @@ static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t 
     if (!value) return;
 
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
-    /* CSV format for Edge Impulse - buffer values by timestamp */
+    /* CSV format for CSV - buffer values by timestamp */
 
     /* Print header on first sample */
     if (!csv_header_printed && CONFIG_APP_BNO085_CSV_PRINT_HEADER) {
@@ -73,39 +74,64 @@ static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t 
         csv_header_printed = true;
     }
 
-    /* Check if this is a new sample (different timestamp) */
-    if (csv_buffer.timestamp_us != 0 && value->timestamp_us != csv_buffer.timestamp_us) {
-        /* Print the previous sample */
+    /* Check if this is a new sample (timestamp differs by more than tolerance) */
+    uint64_t time_diff_ms = 0;
+    if (csv_buffer.timestamp_us != 0) {
+        time_diff_ms = (value->timestamp_us - csv_buffer.timestamp_us) / 1000;
+    }
+
+    if (csv_buffer.timestamp_us != 0 && time_diff_ms > CONFIG_APP_BNO085_CSV_TIMESTAMP_TOLERANCE_MS) {
+        /* Print the previous sample, using last known values if sensor didn't report this cycle */
         printf("%llu", csv_buffer.timestamp_us / 1000);
 #ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
         if (csv_buffer.has_accel) {
             printf(",%.4f,%.4f,%.4f", csv_buffer.accel[0], csv_buffer.accel[1], csv_buffer.accel[2]);
+            csv_last_values.has_accel = true;
+            memcpy(csv_last_values.accel, csv_buffer.accel, sizeof(csv_buffer.accel));
+        } else if (csv_last_values.has_accel) {
+            printf(",%.4f,%.4f,%.4f", csv_last_values.accel[0], csv_last_values.accel[1], csv_last_values.accel[2]);
         }
 #endif
 #ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
         if (csv_buffer.has_gyro) {
             printf(",%.4f,%.4f,%.4f", csv_buffer.gyro[0], csv_buffer.gyro[1], csv_buffer.gyro[2]);
+            csv_last_values.has_gyro = true;
+            memcpy(csv_last_values.gyro, csv_buffer.gyro, sizeof(csv_buffer.gyro));
+        } else if (csv_last_values.has_gyro) {
+            printf(",%.4f,%.4f,%.4f", csv_last_values.gyro[0], csv_last_values.gyro[1], csv_last_values.gyro[2]);
         }
 #endif
 #ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
         if (csv_buffer.has_linear_accel) {
             printf(",%.4f,%.4f,%.4f", csv_buffer.linear_accel[0], csv_buffer.linear_accel[1], csv_buffer.linear_accel[2]);
+            csv_last_values.has_linear_accel = true;
+            memcpy(csv_last_values.linear_accel, csv_buffer.linear_accel, sizeof(csv_buffer.linear_accel));
+        } else if (csv_last_values.has_linear_accel) {
+            printf(",%.4f,%.4f,%.4f", csv_last_values.linear_accel[0], csv_last_values.linear_accel[1], csv_last_values.linear_accel[2]);
         }
 #endif
 #ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
         if (csv_buffer.has_mag) {
             printf(",%.4f,%.4f,%.4f", csv_buffer.mag[0], csv_buffer.mag[1], csv_buffer.mag[2]);
+            csv_last_values.has_mag = true;
+            memcpy(csv_last_values.mag, csv_buffer.mag, sizeof(csv_buffer.mag));
+        } else if (csv_last_values.has_mag) {
+            printf(",%.4f,%.4f,%.4f", csv_last_values.mag[0], csv_last_values.mag[1], csv_last_values.mag[2]);
         }
 #endif
 #ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
         if (csv_buffer.has_quat) {
             printf(",%.4f,%.4f,%.4f,%.4f", csv_buffer.quat[0], csv_buffer.quat[1], csv_buffer.quat[2], csv_buffer.quat[3]);
+            csv_last_values.has_quat = true;
+            memcpy(csv_last_values.quat, csv_buffer.quat, sizeof(csv_buffer.quat));
+        } else if (csv_last_values.has_quat) {
+            printf(",%.4f,%.4f,%.4f,%.4f", csv_last_values.quat[0], csv_last_values.quat[1], csv_last_values.quat[2], csv_last_values.quat[3]);
         }
 #endif
         printf("\n");
         fflush(stdout);
 
-        /* Reset buffer for new sample */
+        /* Reset buffer for new sample (will be filled with current values if they arrive) */
         memset(&csv_buffer, 0, sizeof(csv_buffer));
     }
 
@@ -274,7 +300,7 @@ void app_main(void)
 #endif
 
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
-    ESP_LOGI(TAG, "Output format: CSV (Edge Impulse), sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
+    ESP_LOGI(TAG, "Output format: CSV (CSV), sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 #else
     ESP_LOGI(TAG, "Output format: Verbose, sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 #endif

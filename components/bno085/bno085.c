@@ -10,6 +10,7 @@
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "sdkconfig.h"
 #include <string.h>
 
 #define BNO085_SHTP_HDR_LEN   (4)
@@ -65,8 +66,8 @@ static int bno085_hal_open(sh2_Hal_t *self)
 
 static void bno085_hal_close(sh2_Hal_t *self)
 {
-    struct bno085_dev_t *dev = (struct bno085_dev_t *)self;
-    gpio_set_level(dev->reset_pin, 0);
+    (void) self;
+    /* Don't drive RST during normal operation — only in bno085_deinit() on shutdown */
 }
 
 static int bno085_hal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us)
@@ -238,10 +239,10 @@ void bno085_config_default(bno085_config_t *config)
     if (!config) {
         return;
     }
-    config->i2c_timeout_ms = 100;
-    config->reset_retry_count = 5;
-    config->reset_retry_delay_ms = 30;
-    config->reset_settle_delay_ms = 300;
+    config->i2c_timeout_ms = CONFIG_BNO085_I2C_TIMEOUT_MS;
+    config->reset_retry_count = CONFIG_BNO085_RESET_RETRY_COUNT;
+    config->reset_retry_delay_ms = CONFIG_BNO085_RESET_RETRY_DELAY_MS;
+    config->reset_settle_delay_ms = CONFIG_BNO085_RESET_SETTLE_DELAY_MS;
 }
 
 esp_err_t bno085_init(const bno085_config_t *config,
@@ -277,6 +278,8 @@ esp_err_t bno085_init(const bno085_config_t *config,
     dev->int_pin = int_pin;
     dev->reset_pin = reset_pin;
 
+    ESP_LOGI(TAG, "GPIO pins: INT=%d, RST=%d", int_pin, reset_pin);
+
     /* Configure GPIO pins */
     gpio_config_t int_cfg = {
         .pin_bit_mask = (1ULL << int_pin),
@@ -295,7 +298,7 @@ esp_err_t bno085_init(const bno085_config_t *config,
     gpio_config_t rst_cfg = {
         .pin_bit_mask = (1ULL << reset_pin),
         .mode         = GPIO_MODE_OUTPUT,
-        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type    = GPIO_INTR_DISABLE,
     };
@@ -305,14 +308,16 @@ esp_err_t bno085_init(const bno085_config_t *config,
         free(dev);
         return err;
     }
+    ESP_LOGI(TAG, "RST pin configured, setting to HIGH...");
     gpio_set_level(reset_pin, 1);
+    ESP_LOGI(TAG, "RST pin read after set HIGH: %d", gpio_get_level(reset_pin));
 
-    /* Perform hardware reset pulse */
-    ESP_LOGI(TAG, "Asserting NRST (reset pulse)...");
-    gpio_set_level(reset_pin, 0);
-    vTaskDelay(pdMS_TO_TICKS(10));
-    gpio_set_level(reset_pin, 1);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    /* Note: GPIO RST reset attempted but not functional on Heltec LoRa V3.
+       Device boot is handled by I2C soft-reset in hal_open() instead. */
+    ESP_LOGI(TAG, "Using I2C soft-reset (GPIO RST not available on this board)");
+
+    /* Wait for device to be ready for I2C communication */
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     /* Set up HAL callback table */
     dev->hal_base.open      = bno085_hal_open;
@@ -322,8 +327,10 @@ esp_err_t bno085_init(const bno085_config_t *config,
     dev->hal_base.getTimeUs = bno085_hal_getTimeUs;
 
     /* Open SH2 session */
+    ESP_LOGI(TAG, "Before sh2_open(): RST=%d", gpio_get_level(reset_pin));
     ESP_LOGI(TAG, "Calling sh2_open()...");
     int rc = sh2_open(&dev->hal_base, bno085_event_cb, dev);
+    ESP_LOGI(TAG, "After sh2_open(): RST=%d", gpio_get_level(reset_pin));
     if (rc != SH2_OK) {
         ESP_LOGE(TAG, "sh2_open() failed, rc=%d", rc);
         free(dev);
@@ -336,7 +343,7 @@ esp_err_t bno085_init(const bno085_config_t *config,
 
     /* Debug: Check GPIO states after init */
     ESP_LOGI(TAG, "BNO085 initialized successfully (int_pin=%d, reset_pin=%d)", int_pin, reset_pin);
-    ESP_LOGI(TAG, "GPIO states: INT=%d, RST=%d", gpio_get_level(int_pin), gpio_get_level(reset_pin));
+    ESP_LOGI(TAG, "GPIO states final: INT=%d, RST=%d", gpio_get_level(int_pin), gpio_get_level(reset_pin));
     return ESP_OK;
 }
 
@@ -349,11 +356,6 @@ void bno085_service(bno085_handle_t handle)
     struct bno085_dev_t *dev = (struct bno085_dev_t *)handle;
     if (!dev->initialized) {
         return;
-    }
-
-    /* Set the user callback for this session before calling sh2_service */
-    if (dev->user_callback) {
-        sh2_setSensorCallback(bno085_sensor_cb, dev);
     }
 
     sh2_service();
