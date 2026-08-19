@@ -1,26 +1,5 @@
-/*
- * BNO085 Basic Read Example
- *
- * This example demonstrates how to:
- * 1. Initialize the BNO085 sensor
- * 2. Register a callback to receive sensor data
- * 3. Enable sensors based on configuration
- * 4. Print data in verbose or CSV CSV format
- *
- * Configuration via menuconfig:
- * - Enable/disable individual sensors
- * - Choose output format (verbose or CSV for CSV)
- * - Set sampling rate
- *
- * Hardware Setup:
- * - BNO085 SDA connected to GPIO 6
- * - BNO085 SCL connected to GPIO 7
- * - BNO085 INT (H_INTN) connected to GPIO 5
- * - BNO085 RST (NRST) connected to GPIO 4
- * - BNO085 AD0 tied to GND (I2C address 0x4A)
- */
-
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/i2c_master.h"
@@ -28,21 +7,19 @@
 #include "esp_log.h"
 #include "bno085.h"
 
-/* Application configuration from menuconfig */
 #include "sdkconfig.h"
 
-#define I2C_PORT        I2C_NUM_0
-#define I2C_SDA_PIN     GPIO_NUM_6
-#define I2C_SCL_PIN     GPIO_NUM_7
-#define I2C_FREQ_HZ     400000
-#define I2C_ADDR        0x4A
+#define BNO085_I2C_PORT     I2C_NUM_0
+#define BNO085_SDA_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_I2C_SDA_GPIO)
+#define BNO085_SCL_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_I2C_SCL_GPIO)
+#define BNO085_INT_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_INT_GPIO)
+#define BNO085_RST_GPIO     ((gpio_num_t)CONFIG_APP_BNO085_RST_GPIO)
 
-#define BNO085_INT_PIN  GPIO_NUM_5
-#define BNO085_RST_PIN  GPIO_NUM_4
+#define BNO085_I2C_ADDR     CONFIG_APP_BNO085_I2C_ADDR
+#define BNO085_I2C_FREQ_HZ  CONFIG_APP_BNO085_I2C_FREQ_HZ
 
 static const char *TAG = "bno085_example";
 
-/* CSV data buffer for accumulating sensor values */
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
 typedef struct {
     uint64_t timestamp_us;
@@ -63,25 +40,14 @@ static csv_buffer_t csv_last_values = {0};
 static bool csv_header_printed = false;
 #endif
 
-/**
- * Callback invoked whenever the BNO085 sends sensor data.
- * Outputs data in either verbose or CSV format based on configuration.
- */
-static void sensor_callback(bno085_handle_t handle,
-                           const bno085_sensor_value_t *value,
-                           void *user_context)
+static void sensor_callback(bno085_handle_t handle, const bno085_sensor_value_t *value, void *user_context)
 {
     (void) handle;
     (void) user_context;
 
-    if (!value) {
-        return;
-    }
+    if (!value) return;
 
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
-    /* CSV format for CSV - buffer values by timestamp */
-
-    /* Print header on first sample */
     if (!csv_header_printed && CONFIG_APP_BNO085_CSV_PRINT_HEADER) {
         printf("timestamp_ms");
 #ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
@@ -103,14 +69,12 @@ static void sensor_callback(bno085_handle_t handle,
         csv_header_printed = true;
     }
 
-    /* Check if this is a new sample (timestamp differs by more than tolerance) */
     uint64_t time_diff_ms = 0;
     if (csv_buffer.timestamp_us != 0) {
         time_diff_ms = (value->timestamp_us - csv_buffer.timestamp_us) / 1000;
     }
 
     if (csv_buffer.timestamp_us != 0 && time_diff_ms > CONFIG_APP_BNO085_CSV_TIMESTAMP_TOLERANCE_MS) {
-        /* Print the previous sample, using last known values if sensor didn't report this cycle */
         printf("%llu", csv_buffer.timestamp_us / 1000);
 #ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
         if (csv_buffer.has_accel) {
@@ -160,11 +124,9 @@ static void sensor_callback(bno085_handle_t handle,
         printf("\n");
         fflush(stdout);
 
-        /* Reset buffer for new sample (will be filled with current values if they arrive) */
         memset(&csv_buffer, 0, sizeof(csv_buffer));
     }
 
-    /* Update buffer with current sensor value */
     csv_buffer.timestamp_us = value->timestamp_us;
 
     switch (value->sensor_id) {
@@ -214,24 +176,24 @@ static void sensor_callback(bno085_handle_t handle,
     }
 
 #else
-    /* Verbose format (human-readable) */
     switch (value->sensor_id) {
         case BNO085_SENSOR_ROTATION_VECTOR:
 #ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
-            ESP_LOGI(TAG, "Quaternion: i=%.4f, j=%.4f, k=%.4f, real=%.4f",
+            ESP_LOGI(TAG, "Rotation Vector: i=%.4f, j=%.4f, k=%.4f, real=%.4f, accuracy=%.1f°",
                      value->data.rotation_vector.i,
                      value->data.rotation_vector.j,
                      value->data.rotation_vector.k,
-                     value->data.rotation_vector.real);
+                     value->data.rotation_vector.real,
+                     value->data.rotation_vector.accuracy_rad * 57.2958f);
 #endif
             break;
 
-        case BNO085_SENSOR_ACCELEROMETER:
-#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
-            ESP_LOGI(TAG, "Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
-                     value->data.accelerometer.x,
-                     value->data.accelerometer.y,
-                     value->data.accelerometer.z);
+        case BNO085_SENSOR_LINEAR_ACCELERATION:
+#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
+            ESP_LOGI(TAG, "Linear Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
+                     value->data.linear_acceleration.x,
+                     value->data.linear_acceleration.y,
+                     value->data.linear_acceleration.z);
 #endif
             break;
 
@@ -244,12 +206,12 @@ static void sensor_callback(bno085_handle_t handle,
 #endif
             break;
 
-        case BNO085_SENSOR_LINEAR_ACCELERATION:
-#ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
-            ESP_LOGI(TAG, "Linear Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
-                     value->data.linear_acceleration.x,
-                     value->data.linear_acceleration.y,
-                     value->data.linear_acceleration.z);
+        case BNO085_SENSOR_ACCELEROMETER:
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+            ESP_LOGI(TAG, "Accel: x=%.2f, y=%.2f, z=%.2f m/s²",
+                     value->data.accelerometer.x,
+                     value->data.accelerometer.y,
+                     value->data.accelerometer.z);
 #endif
             break;
 
@@ -270,13 +232,12 @@ static void sensor_callback(bno085_handle_t handle,
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "BNO085 Basic Read Example");
+    ESP_LOGI(TAG, "Initializing BNO085 sensor driver...");
 
-    /* Initialize I2C bus */
     i2c_master_bus_config_t bus_config = {
-        .i2c_port = I2C_PORT,
-        .sda_io_num = I2C_SDA_PIN,
-        .scl_io_num = I2C_SCL_PIN,
+        .i2c_port = BNO085_I2C_PORT,
+        .sda_io_num = BNO085_SDA_GPIO,
+        .scl_io_num = BNO085_SCL_GPIO,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
@@ -285,49 +246,44 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &bus_handle));
     ESP_LOGI(TAG, "I2C bus initialized");
 
-    /* Add BNO085 device to the bus */
     i2c_device_config_t dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = I2C_ADDR,
-        .scl_speed_hz = I2C_FREQ_HZ,
+        .device_address = BNO085_I2C_ADDR,
+        .scl_speed_hz = BNO085_I2C_FREQ_HZ,
     };
     i2c_master_dev_handle_t dev_handle;
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle));
-    ESP_LOGI(TAG, "BNO085 device added to I2C bus");
+    ESP_LOGI(TAG, "BNO085 device added to bus at address 0x%02X", BNO085_I2C_ADDR);
 
-    /* Initialize BNO085 */
     bno085_config_t config;
     bno085_config_default(&config);
 
-    bno085_handle_t bno085;
-    ESP_ERROR_CHECK(bno085_init(&config, dev_handle, BNO085_INT_PIN, BNO085_RST_PIN, &bno085));
-    ESP_LOGI(TAG, "BNO085 initialized");
+    bno085_handle_t bno085_handle;
+    ESP_ERROR_CHECK(bno085_init(&config, dev_handle, BNO085_INT_GPIO, BNO085_RST_GPIO, &bno085_handle));
+    ESP_LOGI(TAG, "BNO085 driver initialized");
 
-    /* Register callback to receive sensor data */
-    ESP_ERROR_CHECK(bno085_register_sensor_callback(bno085, sensor_callback, NULL));
-    ESP_LOGI(TAG, "Sensor callback registered");
+    ESP_ERROR_CHECK(bno085_register_sensor_callback(bno085_handle, sensor_callback, NULL));
 
-    /* Enable sensors based on Kconfig settings */
     uint32_t report_interval_us = (1000000 / CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 
 #ifdef CONFIG_APP_BNO085_ENABLE_ROTATION_VECTOR
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085, BNO085_SENSOR_ROTATION_VECTOR, report_interval_us));
-#endif
-
-#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085, BNO085_SENSOR_ACCELEROMETER, report_interval_us));
-#endif
-
-#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085, BNO085_SENSOR_GYROSCOPE_CALIBRATED, report_interval_us));
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ROTATION_VECTOR, report_interval_us));
 #endif
 
 #ifdef CONFIG_APP_BNO085_ENABLE_LINEAR_ACCELERATION
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085, BNO085_SENSOR_LINEAR_ACCELERATION, report_interval_us));
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_LINEAR_ACCELERATION, report_interval_us));
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_GYROSCOPE
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_GYROSCOPE_CALIBRATED, report_interval_us));
+#endif
+
+#ifdef CONFIG_APP_BNO085_ENABLE_ACCELEROMETER
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_ACCELEROMETER, report_interval_us));
 #endif
 
 #ifdef CONFIG_APP_BNO085_ENABLE_MAGNETIC_FIELD
-    ESP_ERROR_CHECK(bno085_enable_sensor(bno085, BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED, report_interval_us));
+    ESP_ERROR_CHECK(bno085_enable_sensor(bno085_handle, BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED, report_interval_us));
 #endif
 
 #ifdef CONFIG_APP_BNO085_OUTPUT_CSV
@@ -336,11 +292,10 @@ void app_main(void)
     ESP_LOGI(TAG, "Output format: Verbose, sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 #endif
 
-    ESP_LOGI(TAG, "Starting sensor read loop");
+    ESP_LOGI(TAG, "Sensors enabled, starting service loop...");
 
-    /* Main service loop */
     while (1) {
-        bno085_service(bno085);
-        vTaskDelay(pdMS_TO_TICKS(10));  /* Service at 100 Hz */
+        bno085_service(bno085_handle);
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
