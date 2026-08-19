@@ -189,9 +189,29 @@ Use `bno085_config_default()` to get recommended values, then customize as neede
 
 See `examples/basic_read/` for a self-contained example that initializes the device and prints rotation vectors.
 
+## SH2 Library (CEVA Sensor Hub 2)
+
+This component includes the **SH2 (Sensor Hub 2) library** v1.4.0, developed by CEVA-DSP, which implements the low-level communication protocol between the ESP32-S3 and the BNO085 sensor. The SH2 library handles SHTP (Sensor Hub Transport Protocol) over I2C and raw sensor data decoding.
+
+### Vendored Inclusion
+
+The SH2 library is **vendored directly** inside this component at `sh2/`, rather than as an external dependency. This means:
+
+- **No extra steps**: When you install the `bno085` component via `idf.py add-dependency bno085`, the SH2 library is included automatically. No git submodule initialization required.
+- **Self-contained**: Everything needed to communicate with the BNO085 ships together with the component.
+- **Version pinned**: The included SH2 is pinned to v1.4.0 (CEVA-DSP tag from GitHub), ensuring reproducible builds.
+
+### Attribution
+
+The SH2 library is published under the Apache-2.0 license by CEVA-DSP and is included with the same license terms as this driver. See the individual source files inside `sh2/` for per-file attributions and NOTICE.txt.
+
+### Reference
+
+For low-level SH2 protocol details, refer to `sh2/README.md` in this directory or the original repository at [github.com/ceva-dsp/sh2](https://github.com/ceva-dsp/sh2).
+
 ## License
 
-Apache-2.0. Contains the CEVA SH2 library (Apache-2.0 with NOTICE.txt).
+This component is licensed under Apache-2.0. It incorporates the CEVA SH2 library, also Apache-2.0. See `LICENSE` in this directory for full terms.
 
 ## Support
 
