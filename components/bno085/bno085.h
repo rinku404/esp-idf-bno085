@@ -4,6 +4,8 @@
 #include "driver/i2c_master.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
+#include "sh2.h"
+#include "sh2_SensorValue.h"
 
 /**
  * @brief Initialize the BNO085 sensor via SH2 HAL.

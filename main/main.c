@@ -6,8 +6,6 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "bno085.h"
-#include "sh2.h"
-#include "sh2_SensorValue.h"
 
 #define BNO085_I2C_PORT     I2C_NUM_0
 #define BNO085_SDA_GPIO     GPIO_NUM_6     // Heltec Lora V3 SDA
