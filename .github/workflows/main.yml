@@ -6,11 +6,10 @@ on:
 jobs:
   upload_components:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: espressif/upload-components-ci-action@v2
         with:
           components: "bno085: components/bno085"
           namespace: "rinku404"
+          api_token: ${{ secrets.IDF_COMPONENT_API_TOKEN }}
