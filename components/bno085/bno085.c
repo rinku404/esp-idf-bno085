@@ -174,6 +174,7 @@ esp_err_t bno085_init(i2c_master_dev_handle_t i2c_dev, gpio_num_t int_pin, gpio_
     s_hal.int_pin   = int_pin;
     s_hal.reset_pin = reset_pin;
 
+    ESP_LOGI(TAG, "Calling sh2_open()...");
     int rc = sh2_open(&s_hal.base, bno085_event_cb, NULL);
     if (rc != SH2_OK) {
         ESP_LOGE(TAG, "sh2_open() failed, rc=%d", rc);
