@@ -278,7 +278,7 @@ void app_main(void)
 #else
     ESP_LOGI(TAG, "Output format: Verbose, sampling rate: %d Hz", CONFIG_APP_BNO085_SAMPLING_RATE_HZ);
 #endif
-
+    
     ESP_LOGI(TAG, "Sensors enabled, starting service loop...");
 
     while (1) {

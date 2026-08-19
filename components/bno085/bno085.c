@@ -73,18 +73,27 @@ static int bno085_hal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint
 {
     struct bno085_dev_t *dev = (struct bno085_dev_t *)self;
 
-    if (gpio_get_level(dev->int_pin) != 0) {
+    int pin_level = gpio_get_level(dev->int_pin);
+    if (pin_level != 0) {
+        /* Debug: only log first few times to avoid spam */
+        static uint32_t no_data_count = 0;
+        if (no_data_count++ % 1000 == 0) {
+            ESP_LOGD(TAG, "INT pin is HIGH (no data), count=%lu", no_data_count);
+        }
         return 0;
     }
 
+    ESP_LOGD(TAG, "INT pin is LOW, reading I2C data");
     *t_us = (uint32_t) esp_timer_get_time();
 
     uint8_t header[BNO085_SHTP_HDR_LEN];
     esp_err_t err = i2c_master_receive(dev->i2c_dev, header, sizeof(header),
                                        pdMS_TO_TICKS(dev->config.i2c_timeout_ms));
     if (err != ESP_OK) {
+        ESP_LOGD(TAG, "I2C header read failed: %s", esp_err_to_name(err));
         return 0;
     }
+    ESP_LOGD(TAG, "I2C header read OK: 0x%02x 0x%02x", header[0], header[1]);
 
     uint16_t packet_len = (uint16_t)(header[0] | (header[1] << 8)) & 0x7FFF;
     if (packet_len < BNO085_SHTP_HDR_LEN) {
