@@ -1,15 +1,14 @@
 # BNO085 IMU Driver for ESP-IDF
 
-A clean, professional ESP-IDF component for the Bosch BNO085 9-axis IMU (3-axis accelerometer, 3-axis gyroscope, 3-axis magnetometer) via the CEVA SH2 sensor hub protocol over I2C.
+ESP-IDF component for the Bosch BNO085 9-axis IMU (accelerometer, gyroscope, magnetometer) via CEVA's SH2 sensor hub protocol over I2C.
 
 ## Features
 
-- **9-DOF Sensor Fusion**: Accelerometer, gyroscope, and magnetometer with on-chip fusion
-- **Multiple Output Types**: Rotation vectors (quaternions), linear acceleration, raw acceleration, calibrated gyroscope, calibrated magnetic field
-- **Simple Handle-Based API**: Opaque handles, no sh2 types exposed to user code
-- **Fully Decoupled**: SH2 library abstracted behind clean component API
-- **Callback-Based Data Delivery**: Sensor events trigger user callbacks with decoded data
-- **ESP-IDF Idioms**: Configuration structs, error codes, proper documentation
+- 9-DOF sensor fusion with on-chip calibration
+- Rotation vectors (quaternions), linear acceleration, calibrated gyroscope, and magnetic field output
+- Handle-based API with opaque types — no SH2 internals exposed
+- Callback-based data delivery when sensor reports are ready
+- Configurable via ESP-IDF's `menuconfig`
 
 ## Hardware Setup
 
