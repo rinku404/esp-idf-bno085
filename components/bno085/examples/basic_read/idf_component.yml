@@ -1,5 +1,5 @@
-version: "1.0.3"
+version: "1.0.4"
 description: "Basic example demonstrating BNO085 sensor data acquisition"
 dependencies:
-  rinku404/bno085:
-    version: "1.0.3"
+  bno085:
+    version: "1.0.4"

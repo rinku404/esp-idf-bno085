@@ -1,4 +1,4 @@
-version: "1.0.3"
+version: "1.0.4"
 description: "BNO085 9-axis IMU driver for ESP-IDF using CEVA's SH2 sensor hub protocol"
 url: "https://github.com/rinku404/esp-idf-bno085"
 repository: "https://github.com/rinku404/esp-idf-bno085.git"
@@ -14,6 +14,6 @@ tags:
   - "magnetometer"
 
 dependencies:
-  idf: ">=5.2"
+  idf: ">=5.5"
 
 documentation: "https://github.com/rinku404/esp-idf-bno085/blob/master/components/bno085/README.md"
