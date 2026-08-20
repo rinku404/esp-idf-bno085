@@ -1,4 +1,4 @@
-version: "1.0.4"
+version: "1.0.5"
 description: "BNO085 9-axis IMU driver for ESP-IDF using CEVA's SH2 sensor hub protocol"
 url: "https://github.com/rinku404/esp-idf-bno085"
 repository: "https://github.com/rinku404/esp-idf-bno085.git"
