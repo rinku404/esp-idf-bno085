@@ -44,7 +44,7 @@ menu "BNO085 Application Configuration"
         menu "Orientation Sensors"
             config APP_BNO085_ENABLE_ROTATION_VECTOR
                 bool "Rotation Vector (accel+gyro+mag)"
-                default y
+                default n
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_GYRO_CALC_NEEDED
                 select APP_BNO085_MAG_CALC_NEEDED
@@ -79,7 +79,7 @@ menu "BNO085 Application Configuration"
 
             config APP_BNO085_ENABLE_AR_VR_STABILIZED_RV
                 bool "AR/VR Stabilized Rotation Vector"
-                default n
+                default y
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_GYRO_CALC_NEEDED
                 select APP_BNO085_MAG_CALC_NEEDED
@@ -138,7 +138,7 @@ menu "BNO085 Application Configuration"
 
             config APP_BNO085_ENABLE_MAGNETIC_FIELD
                 bool "Magnetic Field (calibrated)"
-                default n
+                default y
                 help
                     Calibrated 3-axis magnetometer in µTesla.
                     Used for compass heading and rotation vectors with magnetometer.
@@ -311,13 +311,13 @@ menu "BNO085 Application Configuration"
         menu "Raw IMU Data"
             config APP_BNO085_PRINT_ACCELEROMETER
                 bool "Accelerometer"
-                default y
+                default n
                 help
                     Print accelerometer data in CSV output.
 
             config APP_BNO085_PRINT_LINEAR_ACCELERATION
                 bool "Linear Acceleration"
-                default y
+                default n
                 help
                     Print linear acceleration data in CSV output.
 
@@ -329,7 +329,7 @@ menu "BNO085 Application Configuration"
 
             config APP_BNO085_PRINT_GYROSCOPE
                 bool "Gyroscope (calibrated)"
-                default y
+                default n
                 help
                     Print calibrated gyroscope data in CSV output.
 
@@ -341,7 +341,7 @@ menu "BNO085 Application Configuration"
 
             config APP_BNO085_PRINT_MAGNETIC_FIELD
                 bool "Magnetic Field (calibrated)"
-                default y
+                default n
                 help
                     Print calibrated magnetometer data in CSV output.
 
