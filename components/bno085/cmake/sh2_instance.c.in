@@ -1,0 +1,83 @@
+/* ============================================================================
+ * AUTO-GENERATED FILE -- DO NOT EDIT
+ *
+ * Produced by configure_file() from
+ * components/bno085/cmake/sh2_instance.c.in for BNO085 instance slot
+ * @BNO085_SLOT@ of @BNO085_MAX_INSTANCES@ (CONFIG_BNO085_MAX_INSTANCES).
+ *
+ * Compiles a private, independently-linked copy of the vendored sh2.c/shtp.c
+ * pair by renaming every externally-linked symbol to a slot-suffixed name
+ * BEFORE including the UNMODIFIED vendor files. The vendor files themselves
+ * (components/bno085/sh2/sh2.c, components/bno085/sh2/shtp.c) are never
+ * edited or copied.
+ * ==========================================================================
+ */
+
+/* ---- shtp.c: 6 externally-linked functions -------------------------- */
+#define shtp_open              shtp_open_slot@BNO085_SLOT@
+#define shtp_close             shtp_close_slot@BNO085_SLOT@
+#define shtp_setEventCallback  shtp_setEventCallback_slot@BNO085_SLOT@
+#define shtp_listenChan        shtp_listenChan_slot@BNO085_SLOT@
+#define shtp_send              shtp_send_slot@BNO085_SLOT@
+#define shtp_service           shtp_service_slot@BNO085_SLOT@
+
+/* ---- sh2.c: 1 global + 18 file-scope op tables ----------------------- */
+#define _sh2                   _sh2_slot@BNO085_SLOT@
+
+#define getProdIdOp            getProdIdOp_slot@BNO085_SLOT@
+#define getSensorConfigOp      getSensorConfigOp_slot@BNO085_SLOT@
+#define setSensorConfigOp      setSensorConfigOp_slot@BNO085_SLOT@
+#define getFrsOp               getFrsOp_slot@BNO085_SLOT@
+#define setFrsOp               setFrsOp_slot@BNO085_SLOT@
+#define getErrorsOp            getErrorsOp_slot@BNO085_SLOT@
+#define getCountsOp            getCountsOp_slot@BNO085_SLOT@
+#define sendCmdOp              sendCmdOp_slot@BNO085_SLOT@
+#define reinitOp               reinitOp_slot@BNO085_SLOT@
+#define saveDcdNowOp           saveDcdNowOp_slot@BNO085_SLOT@
+#define getOscTypeOp           getOscTypeOp_slot@BNO085_SLOT@
+#define setCalConfigOp         setCalConfigOp_slot@BNO085_SLOT@
+#define getCalConfigOp         getCalConfigOp_slot@BNO085_SLOT@
+#define forceFlushOp           forceFlushOp_slot@BNO085_SLOT@
+#define clearDcdAndResetOp     clearDcdAndResetOp_slot@BNO085_SLOT@
+#define startCalOp             startCalOp_slot@BNO085_SLOT@
+#define finishCalOp            finishCalOp_slot@BNO085_SLOT@
+#define sendWheelOp            sendWheelOp_slot@BNO085_SLOT@
+
+/* ---- sh2.c: 33 public API functions ----------------------------------- */
+#define sh2_open                       sh2_open_slot@BNO085_SLOT@
+#define sh2_close                      sh2_close_slot@BNO085_SLOT@
+#define sh2_service                    sh2_service_slot@BNO085_SLOT@
+#define sh2_setSensorCallback          sh2_setSensorCallback_slot@BNO085_SLOT@
+#define sh2_devReset                   sh2_devReset_slot@BNO085_SLOT@
+#define sh2_devOn                      sh2_devOn_slot@BNO085_SLOT@
+#define sh2_devSleep                   sh2_devSleep_slot@BNO085_SLOT@
+#define sh2_getProdIds                 sh2_getProdIds_slot@BNO085_SLOT@
+#define sh2_getSensorConfig            sh2_getSensorConfig_slot@BNO085_SLOT@
+#define sh2_setSensorConfig            sh2_setSensorConfig_slot@BNO085_SLOT@
+#define sh2_getMetadata                sh2_getMetadata_slot@BNO085_SLOT@
+#define sh2_getFrs                     sh2_getFrs_slot@BNO085_SLOT@
+#define sh2_setFrs                     sh2_setFrs_slot@BNO085_SLOT@
+#define sh2_getErrors                  sh2_getErrors_slot@BNO085_SLOT@
+#define sh2_getCounts                  sh2_getCounts_slot@BNO085_SLOT@
+#define sh2_clearCounts                sh2_clearCounts_slot@BNO085_SLOT@
+#define sh2_setTareNow                 sh2_setTareNow_slot@BNO085_SLOT@
+#define sh2_clearTare                  sh2_clearTare_slot@BNO085_SLOT@
+#define sh2_persistTare                sh2_persistTare_slot@BNO085_SLOT@
+#define sh2_setReorientation           sh2_setReorientation_slot@BNO085_SLOT@
+#define sh2_reinitialize               sh2_reinitialize_slot@BNO085_SLOT@
+#define sh2_saveDcdNow                 sh2_saveDcdNow_slot@BNO085_SLOT@
+#define sh2_getOscType                 sh2_getOscType_slot@BNO085_SLOT@
+#define sh2_setCalConfig               sh2_setCalConfig_slot@BNO085_SLOT@
+#define sh2_getCalConfig               sh2_getCalConfig_slot@BNO085_SLOT@
+#define sh2_setDcdAutoSave             sh2_setDcdAutoSave_slot@BNO085_SLOT@
+#define sh2_flush                      sh2_flush_slot@BNO085_SLOT@
+#define sh2_clearDcdAndReset           sh2_clearDcdAndReset_slot@BNO085_SLOT@
+#define sh2_startCal                   sh2_startCal_slot@BNO085_SLOT@
+#define sh2_finishCal                  sh2_finishCal_slot@BNO085_SLOT@
+#define sh2_setIZro                    sh2_setIZro_slot@BNO085_SLOT@
+#define sh2_reportWheelEncoder         sh2_reportWheelEncoder_slot@BNO085_SLOT@
+#define sh2_saveDeadReckoningCalNow    sh2_saveDeadReckoningCalNow_slot@BNO085_SLOT@
+
+/* ---- Pull in the UNMODIFIED vendor sources ---------------------------- */
+#include "@SH2_VENDOR_DIR@/sh2.c"
+#include "@SH2_VENDOR_DIR@/shtp.c"

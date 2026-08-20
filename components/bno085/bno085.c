@@ -3,6 +3,8 @@
 #include "sh2_hal.h"
 #include "sh2_err.h"
 #include "sh2_SensorValue.h"
+#include "sh2_multi.h"
+#include "euler.h"
 #include "driver/i2c_master.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
@@ -26,11 +28,9 @@ struct bno085_dev_t {
     bno085_config_t config;
     bno085_sensor_callback_t user_callback;
     void *user_cookie;
+    const sh2_instance_slot_t *slot;
     bool initialized;
 };
-
-/* Global: tracks the active instance (SH2 library supports only one) */
-static bno085_handle_t s_active_instance = NULL;
 
 /* ============================================================================
  * SH2 HAL Callbacks
@@ -163,20 +163,24 @@ static void bno085_sensor_cb(void *cookie, sh2_SensorEvent_t *pEvent)
     value.status = sh2_value.status & 0x03;  /* Accuracy is in bits 1-0 */
     value.timestamp_us = sh2_value.timestamp;
 
-    /* Decode the five known sensor types */
+    /* Decode all supported sensor types */
     switch (sh2_value.sensorId) {
-        case BNO085_SENSOR_ROTATION_VECTOR:
-            value.data.rotation_vector.i = sh2_value.un.rotationVector.i;
-            value.data.rotation_vector.j = sh2_value.un.rotationVector.j;
-            value.data.rotation_vector.k = sh2_value.un.rotationVector.k;
-            value.data.rotation_vector.real = sh2_value.un.rotationVector.real;
-            value.data.rotation_vector.accuracy_rad = sh2_value.un.rotationVector.accuracy;
-            break;
-
         case BNO085_SENSOR_ACCELEROMETER:
             value.data.accelerometer.x = sh2_value.un.accelerometer.x;
             value.data.accelerometer.y = sh2_value.un.accelerometer.y;
             value.data.accelerometer.z = sh2_value.un.accelerometer.z;
+            break;
+
+        case BNO085_SENSOR_GYROSCOPE_CALIBRATED:
+            value.data.gyroscope_calibrated.x = sh2_value.un.gyroscope.x;
+            value.data.gyroscope_calibrated.y = sh2_value.un.gyroscope.y;
+            value.data.gyroscope_calibrated.z = sh2_value.un.gyroscope.z;
+            break;
+
+        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED:
+            value.data.magnetic_field_calibrated.x = sh2_value.un.magneticField.x;
+            value.data.magnetic_field_calibrated.y = sh2_value.un.magneticField.y;
+            value.data.magnetic_field_calibrated.z = sh2_value.un.magneticField.z;
             break;
 
         case BNO085_SENSOR_LINEAR_ACCELERATION:
@@ -185,16 +189,155 @@ static void bno085_sensor_cb(void *cookie, sh2_SensorEvent_t *pEvent)
             value.data.linear_acceleration.z = sh2_value.un.linearAcceleration.z;
             break;
 
-        case BNO085_SENSOR_GYROSCOPE_CALIBRATED:
-            value.data.gyroscope.x = sh2_value.un.gyroscope.x;
-            value.data.gyroscope.y = sh2_value.un.gyroscope.y;
-            value.data.gyroscope.z = sh2_value.un.gyroscope.z;
+        case BNO085_SENSOR_ROTATION_VECTOR:
+            value.data.quaternion.i = sh2_value.un.rotationVector.i;
+            value.data.quaternion.j = sh2_value.un.rotationVector.j;
+            value.data.quaternion.k = sh2_value.un.rotationVector.k;
+            value.data.quaternion.real = sh2_value.un.rotationVector.real;
+            value.data.quaternion.accuracy_rad = sh2_value.un.rotationVector.accuracy;
             break;
 
-        case BNO085_SENSOR_MAGNETIC_FIELD_CALIBRATED:
-            value.data.magnetic_field.x = sh2_value.un.magneticField.x;
-            value.data.magnetic_field.y = sh2_value.un.magneticField.y;
-            value.data.magnetic_field.z = sh2_value.un.magneticField.z;
+        case BNO085_SENSOR_GRAVITY:
+            value.data.gravity.x = sh2_value.un.gravity.x;
+            value.data.gravity.y = sh2_value.un.gravity.y;
+            value.data.gravity.z = sh2_value.un.gravity.z;
+            break;
+
+        case BNO085_SENSOR_GYROSCOPE_UNCALIBRATED:
+            value.data.gyroscope_uncalibrated.x = sh2_value.un.gyroscopeUncal.x;
+            value.data.gyroscope_uncalibrated.y = sh2_value.un.gyroscopeUncal.y;
+            value.data.gyroscope_uncalibrated.z = sh2_value.un.gyroscopeUncal.z;
+            value.data.gyroscope_uncalibrated.bias_x = sh2_value.un.gyroscopeUncal.biasX;
+            value.data.gyroscope_uncalibrated.bias_y = sh2_value.un.gyroscopeUncal.biasY;
+            value.data.gyroscope_uncalibrated.bias_z = sh2_value.un.gyroscopeUncal.biasZ;
+            break;
+
+        case BNO085_SENSOR_GAME_ROTATION_VECTOR:
+            value.data.game_rotation_vector.i = sh2_value.un.gameRotationVector.i;
+            value.data.game_rotation_vector.j = sh2_value.un.gameRotationVector.j;
+            value.data.game_rotation_vector.k = sh2_value.un.gameRotationVector.k;
+            value.data.game_rotation_vector.real = sh2_value.un.gameRotationVector.real;
+            value.data.game_rotation_vector.accuracy_rad = 0.0f;
+            break;
+
+        case BNO085_SENSOR_GEOMAGNETIC_ROTATION_VECTOR:
+            value.data.geomagnetic_rotation_vector.i = sh2_value.un.geoMagRotationVector.i;
+            value.data.geomagnetic_rotation_vector.j = sh2_value.un.geoMagRotationVector.j;
+            value.data.geomagnetic_rotation_vector.k = sh2_value.un.geoMagRotationVector.k;
+            value.data.geomagnetic_rotation_vector.real = sh2_value.un.geoMagRotationVector.real;
+            value.data.geomagnetic_rotation_vector.accuracy_rad = 0.0f;
+            break;
+
+        case BNO085_SENSOR_PRESSURE:
+            value.data.pressure.value = sh2_value.un.pressure.value;
+            break;
+
+        case BNO085_SENSOR_AMBIENT_LIGHT:
+            value.data.ambient_light.value = sh2_value.un.ambientLight.value;
+            break;
+
+        case BNO085_SENSOR_HUMIDITY:
+            value.data.humidity.value = sh2_value.un.humidity.value;
+            break;
+
+        case BNO085_SENSOR_TEMPERATURE:
+            value.data.temperature.value = sh2_value.un.temperature.value;
+            break;
+
+        case BNO085_SENSOR_MAGNETIC_FIELD_UNCALIBRATED:
+            value.data.magnetic_field_uncalibrated.x = sh2_value.un.magneticFieldUncal.x;
+            value.data.magnetic_field_uncalibrated.y = sh2_value.un.magneticFieldUncal.y;
+            value.data.magnetic_field_uncalibrated.z = sh2_value.un.magneticFieldUncal.z;
+            value.data.magnetic_field_uncalibrated.bias_x = sh2_value.un.magneticFieldUncal.biasX;
+            value.data.magnetic_field_uncalibrated.bias_y = sh2_value.un.magneticFieldUncal.biasY;
+            value.data.magnetic_field_uncalibrated.bias_z = sh2_value.un.magneticFieldUncal.biasZ;
+            break;
+
+        case BNO085_SENSOR_TAP_DETECTOR:
+            value.data.tap_detector.tap_type = sh2_value.un.tapDetector.flags >> 6;  /* bit 6 = double tap */
+            value.data.tap_detector.direction = sh2_value.un.tapDetector.flags & 0x3F;  /* bits 0-5 = direction */
+            break;
+
+        case BNO085_SENSOR_STEP_COUNTER:
+            value.data.step_counter.count = sh2_value.un.stepCounter.steps;
+            break;
+
+        case BNO085_SENSOR_SIGNIFICANT_MOTION:
+            value.data.significant_motion.event = sh2_value.un.sigMotion.motion;
+            break;
+
+        case BNO085_SENSOR_STABILITY_CLASSIFIER:
+            value.data.stability_classifier.activity = sh2_value.un.stabilityClassifier.classification;
+            break;
+
+        case BNO085_SENSOR_RAW_ACCELEROMETER:
+            value.data.raw_accelerometer.x = sh2_value.un.rawAccelerometer.x;
+            value.data.raw_accelerometer.y = sh2_value.un.rawAccelerometer.y;
+            value.data.raw_accelerometer.z = sh2_value.un.rawAccelerometer.z;
+            break;
+
+        case BNO085_SENSOR_RAW_GYROSCOPE:
+            value.data.raw_gyroscope.x = sh2_value.un.rawGyroscope.x;
+            value.data.raw_gyroscope.y = sh2_value.un.rawGyroscope.y;
+            value.data.raw_gyroscope.z = sh2_value.un.rawGyroscope.z;
+            break;
+
+        case BNO085_SENSOR_RAW_MAGNETOMETER:
+            value.data.raw_magnetometer.x = sh2_value.un.rawMagnetometer.x;
+            value.data.raw_magnetometer.y = sh2_value.un.rawMagnetometer.y;
+            value.data.raw_magnetometer.z = sh2_value.un.rawMagnetometer.z;
+            break;
+
+        case BNO085_SENSOR_STEP_DETECTOR:
+            value.data.step_detector.event = 1;  /* Step detected */
+            break;
+
+        case BNO085_SENSOR_SHAKE_DETECTOR:
+            value.data.shake_detector.event = sh2_value.un.shakeDetector.shake > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_FLIP_DETECTOR:
+            value.data.flip_detector.event = sh2_value.un.flipDetector.flip > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_PICKUP_DETECTOR:
+            value.data.pickup_detector.event = sh2_value.un.pickupDetector.pickup > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_PERSONAL_ACTIVITY_CLASSIFIER:
+            value.data.personal_activity_classifier.activity = sh2_value.un.personalActivityClassifier.mostLikelyState;
+            break;
+
+        case BNO085_SENSOR_SLEEP_DETECTOR:
+            value.data.sleep_detector.event = sh2_value.un.sleepDetector.sleepState;
+            break;
+
+        case BNO085_SENSOR_TILT_DETECTOR:
+            value.data.tilt_detector.event = sh2_value.un.tiltDetector.tilt > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_POCKET_DETECTOR:
+            value.data.pocket_detector.event = sh2_value.un.pocketDetector.pocket > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_CIRCLE_DETECTOR:
+            value.data.circle_detector.event = sh2_value.un.circleDetector.circle > 0 ? 1 : 0;
+            break;
+
+        case BNO085_SENSOR_AR_VR_STABILIZED_RV:
+            value.data.ar_vr_stabilized_rv.i = sh2_value.un.arvrStabilizedRV.i;
+            value.data.ar_vr_stabilized_rv.j = sh2_value.un.arvrStabilizedRV.j;
+            value.data.ar_vr_stabilized_rv.k = sh2_value.un.arvrStabilizedRV.k;
+            value.data.ar_vr_stabilized_rv.real = sh2_value.un.arvrStabilizedRV.real;
+            value.data.ar_vr_stabilized_rv.accuracy_rad = sh2_value.un.arvrStabilizedRV.accuracy;
+            break;
+
+        case BNO085_SENSOR_GYRO_INTEGRATED_RV:
+            value.data.gyro_integrated_rv.i = sh2_value.un.gyroIntegratedRV.i;
+            value.data.gyro_integrated_rv.j = sh2_value.un.gyroIntegratedRV.j;
+            value.data.gyro_integrated_rv.k = sh2_value.un.gyroIntegratedRV.k;
+            value.data.gyro_integrated_rv.real = sh2_value.un.gyroIntegratedRV.real;
+            value.data.gyro_integrated_rv.accuracy_rad = 0.0f;
             break;
 
         default:
@@ -255,15 +398,18 @@ esp_err_t bno085_init(const bno085_config_t *config,
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (s_active_instance != NULL) {
-        ESP_LOGE(TAG, "BNO085 already initialized; only one instance supported at a time");
-        return ESP_ERR_INVALID_STATE;
+    /* Acquire a free SH2 instance slot */
+    const sh2_instance_slot_t *slot = sh2_multi_acquire_slot();
+    if (!slot) {
+        ESP_LOGE(TAG, "No free BNO085 slot — increase CONFIG_BNO085_MAX_INSTANCES");
+        return ESP_ERR_NO_MEM;
     }
 
     /* Allocate device structure */
     struct bno085_dev_t *dev = heap_caps_calloc(1, sizeof(struct bno085_dev_t), MALLOC_CAP_DEFAULT);
     if (!dev) {
         ESP_LOGE(TAG, "Failed to allocate device structure");
+        sh2_multi_release_slot(slot);
         return ESP_ERR_NO_MEM;
     }
 
@@ -277,6 +423,7 @@ esp_err_t bno085_init(const bno085_config_t *config,
     dev->i2c_dev = i2c_dev;
     dev->int_pin = int_pin;
     dev->reset_pin = reset_pin;
+    dev->slot = slot;
 
     ESP_LOGI(TAG, "GPIO pins: INT=%d, RST=%d", int_pin, reset_pin);
 
@@ -308,16 +455,15 @@ esp_err_t bno085_init(const bno085_config_t *config,
         free(dev);
         return err;
     }
-    ESP_LOGI(TAG, "RST pin configured, setting to HIGH...");
-    gpio_set_level(reset_pin, 1);
-    ESP_LOGI(TAG, "RST pin read after set HIGH: %d", gpio_get_level(reset_pin));
+    /* Perform hardware reset: RST is active-low */
+    ESP_LOGI(TAG, "Performing hardware reset on BNO085...");
+    gpio_set_level(reset_pin, 0);  /* RST LOW */
+    ESP_LOGI(TAG, "RST driven LOW");
+    vTaskDelay(pdMS_TO_TICKS(100));  /* Hold reset for 100ms */
 
-    /* Note: GPIO RST reset attempted but not functional on Heltec LoRa V3.
-       Device boot is handled by I2C soft-reset in hal_open() instead. */
-    ESP_LOGI(TAG, "Using I2C soft-reset (GPIO RST not available on this board)");
-
-    /* Wait for device to be ready for I2C communication */
-    vTaskDelay(pdMS_TO_TICKS(100));
+    gpio_set_level(reset_pin, 1);  /* RST HIGH (release reset) */
+    ESP_LOGI(TAG, "RST driven HIGH, waiting for device stabilization...");
+    vTaskDelay(pdMS_TO_TICKS(300));  /* Wait for device to stabilize */
 
     /* Set up HAL callback table */
     dev->hal_base.open      = bno085_hal_open;
@@ -326,19 +472,19 @@ esp_err_t bno085_init(const bno085_config_t *config,
     dev->hal_base.write     = bno085_hal_write;
     dev->hal_base.getTimeUs = bno085_hal_getTimeUs;
 
-    /* Open SH2 session */
+    /* Open SH2 session via vtable */
     ESP_LOGI(TAG, "Before sh2_open(): RST=%d", gpio_get_level(reset_pin));
     ESP_LOGI(TAG, "Calling sh2_open()...");
-    int rc = sh2_open(&dev->hal_base, bno085_event_cb, dev);
+    int rc = slot->vtable->open(&dev->hal_base, bno085_event_cb, dev);
     ESP_LOGI(TAG, "After sh2_open(): RST=%d", gpio_get_level(reset_pin));
     if (rc != SH2_OK) {
         ESP_LOGE(TAG, "sh2_open() failed, rc=%d", rc);
+        sh2_multi_release_slot(slot);
         free(dev);
         return ESP_FAIL;
     }
 
     dev->initialized = true;
-    s_active_instance = (bno085_handle_t)dev;
     *out_handle = (bno085_handle_t)dev;
 
     /* Debug: Check GPIO states after init */
@@ -354,11 +500,11 @@ void bno085_service(bno085_handle_t handle)
     }
 
     struct bno085_dev_t *dev = (struct bno085_dev_t *)handle;
-    if (!dev->initialized) {
+    if (!dev->initialized || !dev->slot) {
         return;
     }
 
-    sh2_service();
+    dev->slot->vtable->service();
 }
 
 void bno085_deinit(bno085_handle_t handle)
@@ -372,11 +518,13 @@ void bno085_deinit(bno085_handle_t handle)
         return;
     }
 
-    sh2_close();
+    if (dev->slot) {
+        dev->slot->vtable->close();
+        sh2_multi_release_slot(dev->slot);
+    }
     gpio_set_level(dev->reset_pin, 0);
 
     dev->initialized = false;
-    s_active_instance = NULL;
     free(dev);
 }
 
@@ -397,14 +545,14 @@ esp_err_t bno085_register_sensor_callback(bno085_handle_t handle,
     dev->user_cookie = user_context;
 
     if (callback) {
-        int rc = sh2_setSensorCallback(bno085_sensor_cb, dev);
+        int rc = dev->slot->vtable->setSensorCallback(bno085_sensor_cb, dev);
         if (rc != SH2_OK) {
             ESP_LOGE(TAG, "sh2_setSensorCallback() failed, rc=%d", rc);
             return ESP_FAIL;
         }
         ESP_LOGI(TAG, "Sensor callback registered");
     } else {
-        sh2_setSensorCallback(NULL, NULL);
+        dev->slot->vtable->setSensorCallback(NULL, NULL);
         ESP_LOGI(TAG, "Sensor callback unregistered");
     }
 
@@ -438,7 +586,7 @@ esp_err_t bno085_enable_sensor(bno085_handle_t handle,
     config.sniffEnabled = false;
     config.reportInterval_us = report_interval_us;
 
-    int rc = sh2_setSensorConfig(sensor_id, &config);
+    int rc = dev->slot->vtable->setSensorConfig(sensor_id, &config);
     if (rc != SH2_OK) {
         ESP_LOGE(TAG, "Failed to enable sensor 0x%02x, rc=%d", sensor_id, rc);
         return ESP_FAIL;
@@ -464,7 +612,7 @@ esp_err_t bno085_disable_sensor(bno085_handle_t handle,
     memset(&config, 0, sizeof(config));
     config.reportInterval_us = 0;  /* 0 = disable */
 
-    int rc = sh2_setSensorConfig(sensor_id, &config);
+    int rc = dev->slot->vtable->setSensorConfig(sensor_id, &config);
     if (rc != SH2_OK) {
         ESP_LOGE(TAG, "Failed to disable sensor 0x%02x, rc=%d", sensor_id, rc);
         return ESP_FAIL;

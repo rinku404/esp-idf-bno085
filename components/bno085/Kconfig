@@ -28,4 +28,15 @@ menu "BNO085 Driver (Hardware Level)"
         help
             Time to wait after soft-reset for device to stabilize.
 
+    config BNO085_MAX_INSTANCES
+        int "Maximum concurrent BNO085 instances"
+        default 2
+        range 1 8
+        help
+            Compile-time bound on concurrently open BNO085 sessions. Each unit
+            compiles one additional, independently-linked copy of the vendored
+            sh2.c/shtp.c pair. Flash/IRAM usage scales roughly linearly with
+            this value. Most setups need at most 2 (a BNO085 only exposes 2
+            I2C addresses via AD0); raise only for multiple I2C buses/muxes.
+
 endmenu

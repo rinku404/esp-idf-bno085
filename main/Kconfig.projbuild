@@ -40,33 +40,282 @@ menu "BNO085 Application Configuration"
                 GPIO pin for BNO085 NRST reset.
     endmenu
 
-    menu "Sensors"
-        config APP_BNO085_ENABLE_ROTATION_VECTOR
-            bool "Rotation Vector (Quaternion)"
-            default y
+    menu "Sensors to Enable & Print"
+        menu "Orientation Sensors"
+            config APP_BNO085_ENABLE_ROTATION_VECTOR
+                bool "Rotation Vector (accel+gyro+mag)"
+                default y
+                select APP_BNO085_ACCEL_CALC_NEEDED
+                select APP_BNO085_GYRO_CALC_NEEDED
+                select APP_BNO085_MAG_CALC_NEEDED
+                help
+                    Full 9-axis rotation vector using accelerometer, gyroscope, and magnetometer.
+                    (Auto-enables accel, gyro, mag for calculation if not already printing them)
 
-        config APP_BNO085_ENABLE_ACCELEROMETER
-            bool "Accelerometer"
-            default y
+            config APP_BNO085_ENABLE_GAME_ROTATION_VECTOR
+                bool "Game Rotation Vector (accel+gyro, no mag)"
+                default n
+                select APP_BNO085_ACCEL_CALC_NEEDED
+                select APP_BNO085_GYRO_CALC_NEEDED
+                help
+                    Rotation vector using accelerometer and gyroscope (no magnetometer).
+                    (Auto-enables accel, gyro for calculation if not already printing them)
 
-        config APP_BNO085_ENABLE_GYROSCOPE
-            bool "Calibrated Gyroscope"
-            default y
+            config APP_BNO085_ENABLE_GEOMAGNETIC_ROTATION_VECTOR
+                bool "Geomagnetic Rotation Vector (accel+mag, no gyro)"
+                default n
+                select APP_BNO085_ACCEL_CALC_NEEDED
+                select APP_BNO085_MAG_CALC_NEEDED
+                help
+                    Rotation vector using accelerometer and magnetometer (no gyroscope).
+                    (Auto-enables accel, mag for calculation if not already printing them)
 
-        config APP_BNO085_ENABLE_LINEAR_ACCELERATION
-            bool "Linear Acceleration"
-            default y
+            config APP_BNO085_ENABLE_AR_VR_STABILIZED_RV
+                bool "AR/VR Stabilized Rotation Vector"
+                default n
+                select APP_BNO085_ACCEL_CALC_NEEDED
+                select APP_BNO085_GYRO_CALC_NEEDED
+                select APP_BNO085_MAG_CALC_NEEDED
+                help
+                    High-precision rotation vector for AR/VR applications.
+                    (Auto-enables accel, gyro, mag for calculation if not already printing them)
 
-        config APP_BNO085_ENABLE_MAGNETIC_FIELD
-            bool "Magnetic Field (Magnetometer)"
-            default n
+            config APP_BNO085_ENABLE_GYRO_INTEGRATED_RV
+                bool "Gyro Integrated Rotation Vector (1kHz)"
+                default n
+                select APP_BNO085_GYRO_CALC_NEEDED
+                help
+                    High-frequency (1kHz) rotation vector from gyroscope integration.
+                    (Auto-enables gyro for calculation if not already printing it)
+
+            choice APP_BNO085_ROTATION_VECTOR_FORMAT
+                prompt "Rotation Vector Output Format (applies to all rotation vectors)"
+                default APP_BNO085_RV_FORMAT_QUATERNION
+                help
+                    Choose output format for all rotation vector sensors.
+                    This setting applies globally to all rotation vector types.
+
+                config APP_BNO085_RV_FORMAT_QUATERNION
+                    bool "Quaternion (i, j, k, real, accuracy)"
+                    help
+                        Output as quaternion components (i, j, k) and real part.
+                        Quaternion represents rotation as q = i*x + j*y + k*z + real.
+                        Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
+
+                config APP_BNO085_RV_FORMAT_EULER
+                    bool "Euler Angles (roll, pitch, yaw in degrees)"
+                    help
+                        Output as Euler angles in degrees (roll, pitch, yaw) with accuracy.
+                        Roll: rotation around X axis (-180° to +180°)
+                        Pitch: rotation around Y axis (-90° to +90°)
+                        Yaw: rotation around Z axis (-180° to +180°)
+                        Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
+            endchoice
+        endmenu
+
+        menu "Raw IMU Data"
+            config APP_BNO085_ENABLE_ACCELEROMETER
+                bool "Accelerometer (with gravity)"
+                default y
+                help
+                    Calibrated 3-axis accelerometer in m/s² (includes gravity).
+                    Used as foundation for gravity extraction and rotation vectors.
+
+            config APP_BNO085_ENABLE_LINEAR_ACCELERATION
+                bool "Linear Acceleration (gravity removed)"
+                default y
+                help
+                    Accelerometer with gravity component removed (m/s²).
+
+            config APP_BNO085_ENABLE_GRAVITY
+                bool "Gravity Vector"
+                default n
+                help
+                    Extracted gravity vector in m/s² (accel - linear_accel).
+
+            config APP_BNO085_ENABLE_GYROSCOPE
+                bool "Gyroscope (calibrated)"
+                default y
+                help
+                    Calibrated 3-axis gyroscope in rad/s.
+                    Required for rotation vectors and angular velocity measurements.
+
+            config APP_BNO085_ENABLE_GYROSCOPE_UNCALIBRATED
+                bool "Gyroscope (uncalibrated + bias)"
+                default n
+                help
+                    Raw gyroscope data with bias estimates (rad/s + bias terms).
+
+            config APP_BNO085_ENABLE_MAGNETIC_FIELD
+                bool "Magnetic Field (calibrated)"
+                default n
+                help
+                    Calibrated 3-axis magnetometer in µTesla.
+                    Used for compass heading and rotation vectors with magnetometer.
+
+            config APP_BNO085_ENABLE_MAGNETIC_FIELD_UNCALIBRATED
+                bool "Magnetic Field (uncalibrated + bias)"
+                default n
+                help
+                    Raw magnetometer data with bias estimates (µTesla + bias terms).
+
+            config APP_BNO085_ENABLE_RAW_ACCELEROMETER
+                bool "Raw Accelerometer (ADC counts)"
+                default n
+                help
+                    Unprocessed accelerometer ADC counts (no calibration).
+
+            config APP_BNO085_ENABLE_RAW_GYROSCOPE
+                bool "Raw Gyroscope (ADC counts)"
+                default n
+                help
+                    Unprocessed gyroscope ADC counts (no calibration).
+
+            config APP_BNO085_ENABLE_RAW_MAGNETOMETER
+                bool "Raw Magnetometer (ADC counts)"
+                default n
+                help
+                    Unprocessed magnetometer ADC counts (no calibration).
+        endmenu
+
+        menu "Environmental Sensors"
+            config APP_BNO085_ENABLE_PRESSURE
+                bool "Pressure (Pa)"
+                default n
+                help
+                    Barometric pressure sensor (if equipped). Not all BNO085 variants support this.
+
+            config APP_BNO085_ENABLE_HUMIDITY
+                bool "Humidity (%)"
+                default n
+                help
+                    Relative humidity sensor (if equipped). Not all BNO085 variants support this.
+
+            config APP_BNO085_ENABLE_TEMPERATURE
+                bool "Temperature (°C)"
+                default n
+                help
+                    Temperature sensor (if equipped). Not all BNO085 variants support this.
+
+            config APP_BNO085_ENABLE_AMBIENT_LIGHT
+                bool "Ambient Light (lux)"
+                default n
+                help
+                    Light sensor (if equipped). Not all BNO085 variants support this.
+        endmenu
+
+        menu "Activity & Motion Detection"
+            config APP_BNO085_ENABLE_STEP_COUNTER
+                bool "Step Counter"
+                default n
+                help
+                    Cumulative step count since sensor reset.
+
+            config APP_BNO085_ENABLE_STEP_DETECTOR
+                bool "Step Detector (event)"
+                default n
+                help
+                    Event trigger on each step detected.
+
+            config APP_BNO085_ENABLE_STABILITY_CLASSIFIER
+                bool "Stability Classifier"
+                default n
+                help
+                    Classifies device stability: unknown, on-table, stationary, stable, or motion.
+
+            config APP_BNO085_ENABLE_PERSONAL_ACTIVITY_CLASSIFIER
+                bool "Personal Activity Classifier"
+                default n
+                help
+                    Classifies activity: still, walking, running, cycling, in-vehicle, etc.
+
+            config APP_BNO085_ENABLE_SIGNIFICANT_MOTION
+                bool "Significant Motion Detector"
+                default n
+                help
+                    Triggers when significant motion is detected.
+
+            config APP_BNO085_ENABLE_SHAKE_DETECTOR
+                bool "Shake Detector"
+                default n
+                help
+                    Detects high-frequency shaking motion.
+
+            config APP_BNO085_ENABLE_TAP_DETECTOR
+                bool "Tap Detector (single/double)"
+                default n
+                help
+                    Detects and classifies tap events (single or double tap) with direction.
+
+            config APP_BNO085_ENABLE_FLIP_DETECTOR
+                bool "Flip Detector"
+                default n
+                help
+                    Detects when device is flipped.
+
+            config APP_BNO085_ENABLE_PICKUP_DETECTOR
+                bool "Pickup Detector"
+                default n
+                help
+                    Detects when device is picked up from a surface.
+
+            config APP_BNO085_ENABLE_TILT_DETECTOR
+                bool "Tilt Detector"
+                default n
+                help
+                    Detects change in device tilt angle.
+
+            config APP_BNO085_ENABLE_POCKET_DETECTOR
+                bool "Pocket Detector"
+                default n
+                help
+                    Detects if device is in a pocket (no light, pressure on sensors).
+
+            config APP_BNO085_ENABLE_CIRCLE_DETECTOR
+                bool "Circle Detector"
+                default n
+                help
+                    Detects circular motion patterns.
+
+            config APP_BNO085_ENABLE_SLEEP_DETECTOR
+                bool "Sleep Detector"
+                default n
+                help
+                    Detects sleep state (requires extended monitoring).
+        endmenu
 
         config APP_BNO085_SAMPLING_RATE_HZ
             int "Sampling Rate (Hz)"
             default 100
             range 1 1000
             help
-                Sensor sampling rate in Hz.
+                Sensor sampling rate in Hz for enabled sensors.
+    endmenu
+
+    menu "Dependency Resolution (Internal - Auto-Enabled)"
+        comment "These flags are automatically set when rotation vectors are selected."
+        comment "Sensors are enabled for calculation even if not printing their data."
+
+        config APP_BNO085_ACCEL_CALC_NEEDED
+            bool "Accelerometer needed for rotation vector calculation"
+            default n
+            visible if 0
+            help
+                Internal flag: set automatically when a rotation vector needing accel is selected.
+
+        config APP_BNO085_GYRO_CALC_NEEDED
+            bool "Gyroscope needed for rotation vector calculation"
+            default n
+            visible if 0
+            help
+                Internal flag: set automatically when a rotation vector needing gyro is selected.
+
+        config APP_BNO085_MAG_CALC_NEEDED
+            bool "Magnetometer needed for rotation vector calculation"
+            default n
+            visible if 0
+            help
+                Internal flag: set automatically when a rotation vector needing mag is selected.
     endmenu
 
     menu "Output Format"
