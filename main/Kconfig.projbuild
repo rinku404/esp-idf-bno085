@@ -40,7 +40,7 @@ menu "BNO085 Application Configuration"
                 GPIO pin for BNO085 NRST reset.
     endmenu
 
-    menu "Sensors to Enable & Print"
+    menu "Sensors to Enable (Read from Device)"
         menu "Orientation Sensors"
             config APP_BNO085_ENABLE_ROTATION_VECTOR
                 bool "Rotation Vector (accel+gyro+mag)"
@@ -48,27 +48,34 @@ menu "BNO085 Application Configuration"
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_GYRO_CALC_NEEDED
                 select APP_BNO085_MAG_CALC_NEEDED
+                select APP_BNO085_ENABLE_ACCELEROMETER
+                select APP_BNO085_ENABLE_GYROSCOPE
+                select APP_BNO085_ENABLE_MAGNETIC_FIELD
                 help
                     Full 9-axis rotation vector using accelerometer, gyroscope, and magnetometer.
-                    (Auto-enables accel, gyro, mag for calculation if not already printing them)
+                    Auto-enables accel, gyro, mag sensors for reading (not printing).
 
             config APP_BNO085_ENABLE_GAME_ROTATION_VECTOR
                 bool "Game Rotation Vector (accel+gyro, no mag)"
                 default n
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_GYRO_CALC_NEEDED
+                select APP_BNO085_ENABLE_ACCELEROMETER
+                select APP_BNO085_ENABLE_GYROSCOPE
                 help
                     Rotation vector using accelerometer and gyroscope (no magnetometer).
-                    (Auto-enables accel, gyro for calculation if not already printing them)
+                    Auto-enables accel, gyro sensors for printing.
 
             config APP_BNO085_ENABLE_GEOMAGNETIC_ROTATION_VECTOR
                 bool "Geomagnetic Rotation Vector (accel+mag, no gyro)"
                 default n
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_MAG_CALC_NEEDED
+                select APP_BNO085_ENABLE_ACCELEROMETER
+                select APP_BNO085_ENABLE_MAGNETIC_FIELD
                 help
                     Rotation vector using accelerometer and magnetometer (no gyroscope).
-                    (Auto-enables accel, mag for calculation if not already printing them)
+                    Auto-enables accel, mag sensors for printing.
 
             config APP_BNO085_ENABLE_AR_VR_STABILIZED_RV
                 bool "AR/VR Stabilized Rotation Vector"
@@ -76,41 +83,21 @@ menu "BNO085 Application Configuration"
                 select APP_BNO085_ACCEL_CALC_NEEDED
                 select APP_BNO085_GYRO_CALC_NEEDED
                 select APP_BNO085_MAG_CALC_NEEDED
+                select APP_BNO085_ENABLE_ACCELEROMETER
+                select APP_BNO085_ENABLE_GYROSCOPE
+                select APP_BNO085_ENABLE_MAGNETIC_FIELD
                 help
                     High-precision rotation vector for AR/VR applications.
-                    (Auto-enables accel, gyro, mag for calculation if not already printing them)
+                    Auto-enables accel, gyro, mag sensors for printing.
 
             config APP_BNO085_ENABLE_GYRO_INTEGRATED_RV
                 bool "Gyro Integrated Rotation Vector (1kHz)"
                 default n
                 select APP_BNO085_GYRO_CALC_NEEDED
+                select APP_BNO085_ENABLE_GYROSCOPE
                 help
                     High-frequency (1kHz) rotation vector from gyroscope integration.
-                    (Auto-enables gyro for calculation if not already printing it)
-
-            choice APP_BNO085_ROTATION_VECTOR_FORMAT
-                prompt "Rotation Vector Output Format (applies to all rotation vectors)"
-                default APP_BNO085_RV_FORMAT_QUATERNION
-                help
-                    Choose output format for all rotation vector sensors.
-                    This setting applies globally to all rotation vector types.
-
-                config APP_BNO085_RV_FORMAT_QUATERNION
-                    bool "Quaternion (i, j, k, real, accuracy)"
-                    help
-                        Output as quaternion components (i, j, k) and real part.
-                        Quaternion represents rotation as q = i*x + j*y + k*z + real.
-                        Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
-
-                config APP_BNO085_RV_FORMAT_EULER
-                    bool "Euler Angles (roll, pitch, yaw in degrees)"
-                    help
-                        Output as Euler angles in degrees (roll, pitch, yaw) with accuracy.
-                        Roll: rotation around X axis (-180° to +180°)
-                        Pitch: rotation around Y axis (-90° to +90°)
-                        Yaw: rotation around Z axis (-180° to +180°)
-                        Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
-            endchoice
+                    Auto-enables gyro sensor for printing.
         endmenu
 
         menu "Raw IMU Data"
@@ -130,8 +117,11 @@ menu "BNO085 Application Configuration"
             config APP_BNO085_ENABLE_GRAVITY
                 bool "Gravity Vector"
                 default n
+                select APP_BNO085_ENABLE_ACCELEROMETER
+                select APP_BNO085_ENABLE_LINEAR_ACCELERATION
                 help
                     Extracted gravity vector in m/s² (accel - linear_accel).
+                    Auto-enables accelerometer and linear acceleration sensors.
 
             config APP_BNO085_ENABLE_GYROSCOPE
                 bool "Gyroscope (calibrated)"
@@ -283,13 +273,208 @@ menu "BNO085 Application Configuration"
                 help
                     Detects sleep state (requires extended monitoring).
         endmenu
+    endmenu
 
-        config APP_BNO085_SAMPLING_RATE_HZ
-            int "Sampling Rate (Hz)"
-            default 100
-            range 1 1000
-            help
-                Sensor sampling rate in Hz for enabled sensors.
+    menu "Sensors to Print (CSV Output)"
+        menu "Orientation Sensors"
+            config APP_BNO085_PRINT_ROTATION_VECTOR
+                bool "Rotation Vector"
+                default n
+                help
+                    Print rotation vector data in CSV output.
+
+            config APP_BNO085_PRINT_GAME_ROTATION_VECTOR
+                bool "Game Rotation Vector"
+                default n
+                help
+                    Print game rotation vector data in CSV output.
+
+            config APP_BNO085_PRINT_GEOMAGNETIC_ROTATION_VECTOR
+                bool "Geomagnetic Rotation Vector"
+                default n
+                help
+                    Print geomagnetic rotation vector data in CSV output.
+
+            config APP_BNO085_PRINT_AR_VR_STABILIZED_RV
+                bool "AR/VR Stabilized Rotation Vector"
+                default y
+                help
+                    Print AR/VR stabilized rotation vector data in CSV output.
+
+            config APP_BNO085_PRINT_GYRO_INTEGRATED_RV
+                bool "Gyro Integrated Rotation Vector"
+                default n
+                help
+                    Print gyro integrated rotation vector data in CSV output.
+        endmenu
+
+        menu "Raw IMU Data"
+            config APP_BNO085_PRINT_ACCELEROMETER
+                bool "Accelerometer"
+                default y
+                help
+                    Print accelerometer data in CSV output.
+
+            config APP_BNO085_PRINT_LINEAR_ACCELERATION
+                bool "Linear Acceleration"
+                default y
+                help
+                    Print linear acceleration data in CSV output.
+
+            config APP_BNO085_PRINT_GRAVITY
+                bool "Gravity Vector"
+                default n
+                help
+                    Print gravity vector data in CSV output.
+
+            config APP_BNO085_PRINT_GYROSCOPE
+                bool "Gyroscope (calibrated)"
+                default y
+                help
+                    Print calibrated gyroscope data in CSV output.
+
+            config APP_BNO085_PRINT_GYROSCOPE_UNCALIBRATED
+                bool "Gyroscope (uncalibrated + bias)"
+                default n
+                help
+                    Print uncalibrated gyroscope data with bias in CSV output.
+
+            config APP_BNO085_PRINT_MAGNETIC_FIELD
+                bool "Magnetic Field (calibrated)"
+                default y
+                help
+                    Print calibrated magnetometer data in CSV output.
+
+            config APP_BNO085_PRINT_MAGNETIC_FIELD_UNCALIBRATED
+                bool "Magnetic Field (uncalibrated + bias)"
+                default n
+                help
+                    Print uncalibrated magnetometer data with bias in CSV output.
+
+            config APP_BNO085_PRINT_RAW_ACCELEROMETER
+                bool "Raw Accelerometer (ADC counts)"
+                default n
+                help
+                    Print raw accelerometer ADC counts in CSV output.
+
+            config APP_BNO085_PRINT_RAW_GYROSCOPE
+                bool "Raw Gyroscope (ADC counts)"
+                default n
+                help
+                    Print raw gyroscope ADC counts in CSV output.
+
+            config APP_BNO085_PRINT_RAW_MAGNETOMETER
+                bool "Raw Magnetometer (ADC counts)"
+                default n
+                help
+                    Print raw magnetometer ADC counts in CSV output.
+        endmenu
+
+        menu "Environmental Sensors"
+            config APP_BNO085_PRINT_PRESSURE
+                bool "Pressure"
+                default n
+                help
+                    Print pressure data in CSV output.
+
+            config APP_BNO085_PRINT_HUMIDITY
+                bool "Humidity"
+                default n
+                help
+                    Print humidity data in CSV output.
+
+            config APP_BNO085_PRINT_TEMPERATURE
+                bool "Temperature"
+                default n
+                help
+                    Print temperature data in CSV output.
+
+            config APP_BNO085_PRINT_AMBIENT_LIGHT
+                bool "Ambient Light"
+                default n
+                help
+                    Print ambient light data in CSV output.
+        endmenu
+
+        menu "Activity & Motion Detection"
+            config APP_BNO085_PRINT_STEP_COUNTER
+                bool "Step Counter"
+                default n
+                help
+                    Print step counter data in CSV output.
+
+            config APP_BNO085_PRINT_STEP_DETECTOR
+                bool "Step Detector"
+                default n
+                help
+                    Print step detector events in CSV output.
+
+            config APP_BNO085_PRINT_STABILITY_CLASSIFIER
+                bool "Stability Classifier"
+                default n
+                help
+                    Print stability classification in CSV output.
+
+            config APP_BNO085_PRINT_PERSONAL_ACTIVITY_CLASSIFIER
+                bool "Personal Activity Classifier"
+                default n
+                help
+                    Print activity classification in CSV output.
+
+            config APP_BNO085_PRINT_SIGNIFICANT_MOTION
+                bool "Significant Motion"
+                default n
+                help
+                    Print significant motion detector events in CSV output.
+
+            config APP_BNO085_PRINT_SHAKE_DETECTOR
+                bool "Shake Detector"
+                default n
+                help
+                    Print shake detector events in CSV output.
+
+            config APP_BNO085_PRINT_TAP_DETECTOR
+                bool "Tap Detector"
+                default n
+                help
+                    Print tap detector events in CSV output.
+
+            config APP_BNO085_PRINT_FLIP_DETECTOR
+                bool "Flip Detector"
+                default n
+                help
+                    Print flip detector events in CSV output.
+
+            config APP_BNO085_PRINT_PICKUP_DETECTOR
+                bool "Pickup Detector"
+                default n
+                help
+                    Print pickup detector events in CSV output.
+
+            config APP_BNO085_PRINT_TILT_DETECTOR
+                bool "Tilt Detector"
+                default n
+                help
+                    Print tilt detector events in CSV output.
+
+            config APP_BNO085_PRINT_POCKET_DETECTOR
+                bool "Pocket Detector"
+                default n
+                help
+                    Print pocket detector events in CSV output.
+
+            config APP_BNO085_PRINT_CIRCLE_DETECTOR
+                bool "Circle Detector"
+                default n
+                help
+                    Print circle detector events in CSV output.
+
+            config APP_BNO085_PRINT_SLEEP_DETECTOR
+                bool "Sleep Detector"
+                default n
+                help
+                    Print sleep detector events in CSV output.
+        endmenu
     endmenu
 
     menu "Dependency Resolution (Internal - Auto-Enabled)"
@@ -319,26 +504,71 @@ menu "BNO085 Application Configuration"
     endmenu
 
     menu "Output Format"
-        choice APP_BNO085_OUTPUT_FORMAT
-            prompt "Format"
-            default APP_BNO085_OUTPUT_VERBOSE
+        config APP_BNO085_OUTPUT_CSV
+            bool "CSV Output Enabled"
+            default y
             help
-                Select output format for sensor data.
+                Enable CSV (comma-separated values) output format.
 
-            config APP_BNO085_OUTPUT_VERBOSE
-                bool "Verbose (human-readable)"
+        config APP_BNO085_OUTPUT_PERIOD_MS
+            int "Output Period (ms)"
+            depends on APP_BNO085_OUTPUT_CSV
+            default 100
+            range 10 10000
+            help
+                Frequency of data output in CSV mode (timer-based print task).
 
-            config APP_BNO085_OUTPUT_CSV
-                bool "CSV (comma-separated values)"
+        config APP_BNO085_SENSOR_UPDATE_PERIOD_MS
+            int "Sensor Update Period (ms)"
+            default 10
+            range 5 1000
+            help
+                How frequently to poll the BNO085 for new sensor data.
+                Lower values = more responsive, higher CPU usage.
+                Higher values = less responsive, lower CPU usage.
+                (This is the polling interval of the service task, not individual sensor rates)
+
+        choice APP_BNO085_ROTATION_VECTOR_FORMAT
+            prompt "Rotation Vector Output Format (applies to all rotation vectors)"
+            default APP_BNO085_RV_FORMAT_EULER
+            help
+                Choose output format for all rotation vector sensors.
+                This setting applies globally to all rotation vector types.
+
+            config APP_BNO085_RV_FORMAT_QUATERNION
+                bool "Quaternion (i, j, k, real, accuracy)"
+                help
+                    Output as quaternion components (i, j, k) and real part.
+                    Quaternion represents rotation as q = i*x + j*y + k*z + real.
+                    Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
+
+            config APP_BNO085_RV_FORMAT_EULER
+                bool "Euler Angles (roll, pitch, yaw in degrees)"
+                help
+                    Output as Euler angles in degrees (roll, pitch, yaw) with accuracy.
+                    Roll: rotation around X axis (-180° to +180°)
+                    Pitch: rotation around Y axis (-90° to +90°)
+                    Yaw: rotation around Z axis (-180° to +180°)
+                    Applied to: Rotation Vector, Game RV, Geomagnetic RV, AR/VR RV, Gyro Integrated RV.
         endchoice
 
-        config APP_BNO085_CSV_TIMESTAMP_TOLERANCE_MS
-            int "CSV Timestamp Tolerance (ms)"
+        choice APP_BNO085_TIMESTAMP_PRINT_MODE
+            prompt "Timestamp Column in CSV"
             depends on APP_BNO085_OUTPUT_CSV
-            default 5
-            range 1 100
+            default APP_BNO085_TIMESTAMP_PRINT_MODE_DISABLED
             help
-                Sensor readings within this tolerance grouped into one line.
+                Whether to print sensor timestamp in CSV output.
+
+            config APP_BNO085_TIMESTAMP_PRINT_MODE_DISABLED
+                bool "None (no timestamp)"
+                help
+                    Do not print any timestamps.
+
+            config APP_BNO085_TIMESTAMP_PRINT_MODE_SENSOR
+                bool "Sensor Timestamp Only"
+                help
+                    Print timestamp of when data was read from sensor.
+        endchoice
 
         config APP_BNO085_CSV_PRINT_HEADER
             bool "Print CSV Header"
@@ -346,6 +576,33 @@ menu "BNO085 Application Configuration"
             default y
             help
                 Print column names as first line.
+
+        choice APP_BNO085_CSV_SEPARATOR
+            prompt "CSV Separator Character"
+            depends on APP_BNO085_OUTPUT_CSV
+            default APP_BNO085_CSV_SEPARATOR_COMMA
+            help
+                Character used to separate values in CSV output.
+
+            config APP_BNO085_CSV_SEPARATOR_COMMA
+                bool "Comma (,)"
+
+            config APP_BNO085_CSV_SEPARATOR_SEMICOLON
+                bool "Semicolon (;)"
+
+            config APP_BNO085_CSV_SEPARATOR_PIPE
+                bool "Pipe (|)"
+
+            config APP_BNO085_CSV_SEPARATOR_TAB
+                bool "Tab (\\t)"
+        endchoice
+
+        config APP_BNO085_CSV_SPACE_AFTER_SEPARATOR
+            bool "Add Space After Separator"
+            depends on APP_BNO085_OUTPUT_CSV
+            default y
+            help
+                Add a space after each separator (e.g., ", " instead of ",").
     endmenu
 
 endmenu

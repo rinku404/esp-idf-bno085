@@ -228,3 +228,4 @@ Accuracy improves after ~1 minute of motion.
 - `components/bno085/SENSOR_GUIDE.md` — All 40+ sensor types
 - BNO085 datasheet — SH2 protocol reference
 - ESP-IDF docs — Menuconfig & configuration
+
