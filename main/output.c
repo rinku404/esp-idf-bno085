@@ -37,12 +37,6 @@ static const char *TAG = "output";
 #define CSV_SEP "\t"
 #endif
 
-#ifdef CONFIG_APP_BNO085_TIMESTAMP_PRINT_MODE_SENSOR
-#define FIRST_SENSOR_SEP CSV_SEP
-#else
-#define FIRST_SENSOR_SEP ""
-#endif
-
 static SemaphoreHandle_t output_ready_sem = NULL;
 static bool csv_header_printed = false;
 
@@ -62,133 +56,160 @@ static void quaternion_to_euler(float i, float j, float k, float real,
 
 static void print_csv_header(void)
 {
+    bool first = true;
+
     #ifdef CONFIG_APP_BNO085_TIMESTAMP_PRINT_MODE_SENSOR
     printf("sensor_timestamp_ms");
+    first = false;
     #endif
 
     #ifdef CONFIG_APP_BNO085_PRINT_ROTATION_VECTOR
         #ifdef CONFIG_APP_BNO085_RV_FORMAT_QUATERNION
-        #ifdef CONFIG_APP_BNO085_TIMESTAMP_PRINT_MODE_SENSOR
-        printf("%srv_i%srv_j%srv_k%srv_real%srv_acc", CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%srv_i%srv_j%srv_k%srv_real%srv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #else
-        printf("rv_i%srv_j%srv_k%srv_real%srv_acc", CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%srv_roll%srv_pitch%srv_yaw%srv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #endif
-        #else
-        #ifdef CONFIG_APP_BNO085_TIMESTAMP_PRINT_MODE_SENSOR
-        printf("%srv_roll%srv_pitch%srv_yaw%srv_acc", CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
-        #else
-        printf("rv_roll%srv_pitch%srv_yaw%srv_acc", CSV_SEP, CSV_SEP, CSV_SEP);
-        #endif
-        #endif
+        first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GAME_ROTATION_VECTOR
         #ifdef CONFIG_APP_BNO085_RV_FORMAT_QUATERNION
-        printf("%sgrv_i%sgrv_j%sgrv_k%sgrv_real%sgrv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgrv_i%sgrv_j%sgrv_k%sgrv_real%sgrv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #else
-        printf("%sgrv_roll%sgrv_pitch%sgrv_yaw%sgrv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgrv_roll%sgrv_pitch%sgrv_yaw%sgrv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #endif
+        first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GEOMAGNETIC_ROTATION_VECTOR
         #ifdef CONFIG_APP_BNO085_RV_FORMAT_QUATERNION
-        printf("%sgmrv_i%sgmrv_j%sgmrv_k%sgmrv_real%sgmrv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgmrv_i%sgmrv_j%sgmrv_k%sgmrv_real%sgmrv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #else
-        printf("%sgmrv_roll%sgmrv_pitch%sgmrv_yaw%sgmrv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgmrv_roll%sgmrv_pitch%sgmrv_yaw%sgmrv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #endif
+        first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_AR_VR_STABILIZED_RV
         #ifdef CONFIG_APP_BNO085_RV_FORMAT_QUATERNION
-        printf("%sarvr_i%sarvr_j%sarvr_k%sarvr_real%sarvr_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sarvr_i%sarvr_j%sarvr_k%sarvr_real%sarvr_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #else
-        printf("%sarvr_roll%sarvr_pitch%sarvr_yaw%sarvr_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sarvr_roll%sarvr_pitch%sarvr_yaw%sarvr_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #endif
+        first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GYRO_INTEGRATED_RV
         #ifdef CONFIG_APP_BNO085_RV_FORMAT_QUATERNION
-        printf("%sgirv_i%sgirv_j%sgirv_k%sgirv_real%sgirv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgirv_i%sgirv_j%sgirv_k%sgirv_real%sgirv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #else
-        printf("%sgirv_roll%sgirv_pitch%sgirv_yaw%sgirv_acc", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+        printf("%sgirv_roll%sgirv_pitch%sgirv_yaw%sgirv_acc", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
         #endif
+        first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_ACCELEROMETER
-    printf("%sac_x%sac_y%sac_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%sac_x%sac_y%sac_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_LINEAR_ACCELERATION
-    printf("%sla_x%sla_y%sla_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%sla_x%sla_y%sla_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GRAVITY
-    printf("%sgr_x%sgr_y%sgr_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%sgr_x%sgr_y%sgr_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GYROSCOPE
-    printf("%sgy_x%sgy_y%sgy_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%sgy_x%sgy_y%sgy_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_GYROSCOPE_UNCALIBRATED
-    printf("%sgyu_x%sgyu_y%sgyu_z%sgyu_bx%sgyu_by%sgyu_bz", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+    printf("%sgyu_x%sgyu_y%sgyu_z%sgyu_bx%sgyu_by%sgyu_bz", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_MAGNETIC_FIELD
-    printf("%smg_x%smg_y%smg_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%smg_x%smg_y%smg_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_MAGNETIC_FIELD_UNCALIBRATED
-    printf("%smgu_x%smgu_y%smgu_z%smgu_bx%smgu_by%smgu_bz", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+    printf("%smgu_x%smgu_y%smgu_z%smgu_bx%smgu_by%smgu_bz", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_RAW_ACCELEROMETER
-    printf("%srac_x%srac_y%srac_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%srac_x%srac_y%srac_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_RAW_GYROSCOPE
-    printf("%srgy_x%srgy_y%srgy_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%srgy_x%srgy_y%srgy_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_RAW_MAGNETOMETER
-    printf("%srmg_x%srmg_y%srmg_z", FIRST_SENSOR_SEP, CSV_SEP, CSV_SEP);
+    printf("%srmg_x%srmg_y%srmg_z", first ? "" : CSV_SEP, CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_PRESSURE
-    printf("%spr", FIRST_SENSOR_SEP);
+    printf("%spr", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_HUMIDITY
-    printf("%shm", FIRST_SENSOR_SEP);
+    printf("%shm", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_TEMPERATURE
-    printf("%stm", FIRST_SENSOR_SEP);
+    printf("%stm", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_AMBIENT_LIGHT
-    printf("%sal", FIRST_SENSOR_SEP);
+    printf("%sal", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_STEP_COUNTER
-    printf("%ssc", FIRST_SENSOR_SEP);
+    printf("%ssc", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_TAP_DETECTOR
-    printf("%stap_type%stap_dir", FIRST_SENSOR_SEP, CSV_SEP);
+    printf("%stap_type%stap_dir", first ? "" : CSV_SEP, CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_STABILITY_CLASSIFIER
-    printf("%sstab_class", FIRST_SENSOR_SEP);
+    printf("%sstab_class", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_PERSONAL_ACTIVITY_CLASSIFIER
-    printf("%spact_class", FIRST_SENSOR_SEP);
+    printf("%spact_class", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_STEP_DETECTOR
-    printf("%sstep_ev", FIRST_SENSOR_SEP);
+    printf("%sstep_ev", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_SIGNIFICANT_MOTION
-    printf("%ssig_motion", FIRST_SENSOR_SEP);
+    printf("%ssig_motion", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_SHAKE_DETECTOR
-    printf("%sshake", FIRST_SENSOR_SEP);
+    printf("%sshake", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_FLIP_DETECTOR
-    printf("%sflip", FIRST_SENSOR_SEP);
+    printf("%sflip", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_PICKUP_DETECTOR
-    printf("%spickup", FIRST_SENSOR_SEP);
+    printf("%spickup", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_TILT_DETECTOR
-    printf("%stilt", FIRST_SENSOR_SEP);
+    printf("%stilt", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_POCKET_DETECTOR
-    printf("%spocket", FIRST_SENSOR_SEP);
+    printf("%spocket", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_CIRCLE_DETECTOR
-    printf("%scircle", FIRST_SENSOR_SEP);
+    printf("%scircle", first ? "" : CSV_SEP);
+    first = false;
     #endif
     #ifdef CONFIG_APP_BNO085_PRINT_SLEEP_DETECTOR
-    printf("%ssleep", FIRST_SENSOR_SEP);
+    printf("%ssleep", first ? "" : CSV_SEP);
+    first = false;
     #endif
     printf("\n");
     fflush(stdout);
