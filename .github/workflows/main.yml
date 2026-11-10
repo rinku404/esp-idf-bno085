@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: espressif/upload-components-ci-action@v2
         with:
           components: "bno085: components/bno085"

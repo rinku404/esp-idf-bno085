@@ -17,3 +17,7 @@ dependencies:
   idf: ">=5.5"
 
 documentation: "https://github.com/rinku404/esp-idf-bno085/blob/master/components/bno085/README.md"
+
+files:
+  exclude:
+    - "sh2/.git"
