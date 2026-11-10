@@ -170,17 +170,17 @@ typedef void (*bno085_sensor_callback_t)(bno085_handle_t handle,
  *
  * **I2C Address (AD0 Pin):**
  * The BNO085 has an AD0 pin that selects its I2C address:
- *  - AD0 pulled LOW (GND)  → I2C address 0x28
- *  - AD0 pulled HIGH (3V3) → I2C address 0x29
+ *  - AD0 pulled LOW (GND)  → I2C address 0x4A
+ *  - AD0 pulled HIGH (3V3) → I2C address 0x4B
  *
  * The caller must create the i2c_dev handle with the correct address matching
  * their AD0 pin configuration. For example:
- *  - If AD0=LOW:  create handle with address 0x28
- *  - If AD0=HIGH: create handle with address 0x29
+ *  - If AD0=LOW:  create handle with address 0x4A
+ *  - If AD0=HIGH: create handle with address 0x4B
  *
  * **Multiplexer Usage:**
  * With an I2C multiplexer (e.g., TCA9548A), you can have multiple BNO085 sensors
- * on different channels. Each sensor appears at its configured I2C address (0x28 or 0x29)
+ * on different channels. Each sensor appears at its configured I2C address (0x4A or 0x4B)
  * when its channel is selected. Initialize one BNO085 handle per sensor, then select
  * the multiplexer channel before calling bno085_service() on each handle.
  *
@@ -190,7 +190,7 @@ typedef void (*bno085_sensor_callback_t)(bno085_handle_t handle,
  *
  * @param config Pointer to configuration struct (can be NULL to use defaults).
  * @param i2c_dev Configured I2C master device handle (must not be NULL).
- *                Must be created with the correct address (0x28 or 0x29) matching AD0 state.
+ *                Must be created with the correct address (0x4A or 0x4B) matching AD0 state.
  * @param int_pin GPIO number for H_INTN (active-low data-ready signal).
  * @param reset_pin GPIO number for RSTN (active-low hardware reset).
  * @param out_handle Pointer to receive the allocated device handle.

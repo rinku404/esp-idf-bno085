@@ -22,7 +22,7 @@ ESP-IDF component for the Bosch BNO085 9-axis IMU over I2C using CEVA's SH2 sens
 | SCL        | GPIO 7       | I2C SCL      | Pull-up enabled |
 | INT (H_INTN)| GPIO 5      | Interrupt    | Active-low      |
 | RST (NRST) | GPIO 4       | Reset        | Active-low      |
-| AD0        | GND          | Slave addr   | I2C addr 0x28   |
+| AD0        | GND          | Slave addr   | I2C addr 0x4A   |
 | VCC        | 3.3V         | Power        |                 |
 | GND        | GND          | Ground       |                 |
 
@@ -31,8 +31,8 @@ ESP-IDF component for the Bosch BNO085 9-axis IMU over I2C using CEVA's SH2 sens
 ### I2C Address Selection
 
 The BNO085 has an AD0 pin that selects the I2C address:
-- AD0 = GND (0V) → I2C address 0x28
-- AD0 = 3.3V → I2C address 0x29
+- AD0 = GND (0V) → I2C address 0x4A
+- AD0 = 3.3V → I2C address 0x4B
 
 Create the I2C device handle with the correct address matching your AD0 pin configuration.
 
