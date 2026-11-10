@@ -7,7 +7,7 @@ ESP-IDF component for the Bosch BNO085 9-axis IMU over I2C using CEVA's SH2 sens
 - 35+ sensors (orientation, raw IMU, environmental, activity detection, gesture detection)
 - Multiple rotation vector types (standard, game, geomagnetic, AR/VR optimized, 1kHz gyro-integrated)
 - Up to 8 concurrent sensors on the same I2C bus (configurable)
-- Flexible I2C addressing (0x28 or 0x29 via AD0 pin)
+- Flexible I2C addressing (0x4A or 0x4B via AD0 pin)
 - Multiplexer support for 8+ sensors
 - Handle-based API with callback-based data delivery
 - Full sensor decoding into named fields
@@ -89,7 +89,7 @@ void app_main(void)
 
     i2c_device_config_t dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = 0x28,  // AD0 = GND
+        .device_address = 0x4A,  // AD0 = GND
         .scl_speed_hz = 400000,
     };
     i2c_master_dev_handle_t i2c_dev;
